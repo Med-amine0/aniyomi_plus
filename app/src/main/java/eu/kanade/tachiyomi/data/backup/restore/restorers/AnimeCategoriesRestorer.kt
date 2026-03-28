@@ -26,7 +26,7 @@ class AnimeCategoriesRestorer(
                     if (dbCategory != null) return@map dbCategory
                     val order = nextOrder++
                     animeHandler.awaitOneExecutable {
-                        categoriesQueries.insert(it.name, order, it.flags, it.parentId)
+                        categoriesQueries.insert(it.name, order, it.flags, it.parentId, it.thumbnailUrl)
                         categoriesQueries.selectLastInsertedRowId()
                     }
                         .let { id -> it.toCategory(id).copy(order = order) }

@@ -6,8 +6,8 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.manga.repository.MangaCategoryRepository
 import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.download.service.DownloadPreferences
-import tachiyomi.domain.entries.manga.repository.MangaRepository
 import tachiyomi.domain.entries.manga.model.MangaUpdate
+import tachiyomi.domain.entries.manga.repository.MangaRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 
 class DeleteMangaCategory(
@@ -27,34 +27,30 @@ class DeleteMangaCategory(
             }
         }
         
-        val categoryIdsToDelete = listOf(categoryId) + getAllChildIds(categoryId)
+        val categoryIdsToDelete = listOf(categoryId).plus(getAllChildIds(categoryId)).toSet()
         
-        val allManga = mangaRepository.getLibraryManga()
+        val allLibraryManga = mangaRepository.getLibraryManga()
+        val mangaIdsInCategories = allLibraryManga
+            .filter { it.category in categoryIdsToDelete }
+            .map { it.id }
         
-        for (categoryIdToDel in categoryIdsToDelete) {
+        if (mangaIdsInCategories.isNotEmpty()) {
+            val updates = mangaIdsInCategories.map { id ->
+                MangaUpdate(id = id, favorite = false)
+            }
             try {
-                categoryRepository.deleteMangaCategory(categoryIdToDel)
+                mangaRepository.updateAllManga(updates)
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
-                return@withNonCancellableContext Result.InternalError(e)
             }
         }
         
-        for (manga in allManga) {
-            val mangaCategories = categoryRepository.getCategoriesByMangaId(manga.id)
-            val remainingCategories = mangaCategories.filterNot { it.id in categoryIdsToDelete }
-            
-            if (remainingCategories.isEmpty()) {
-                try {
-                    mangaRepository.updateManga(
-                        MangaUpdate(
-                            id = manga.id,
-                            favorite = false,
-                        )
-                    )
-                } catch (e: Exception) {
-                    logcat(LogPriority.ERROR, e)
-                }
+        for (id in categoryIdsToDelete) {
+            try {
+                categoryRepository.deleteMangaCategory(id)
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e)
+                return@withNonCancellableContext Result.InternalError(e)
             }
         }
 
@@ -73,14 +69,14 @@ class DeleteMangaCategory(
 
         val categoryPreferences = listOf(
             libraryPreferences.mangaUpdateCategories(),
-            libraryPreferences.mangaUpdateCategories(),
+            libraryPreferences.mangaUpdateCategoriesExclude(),
             downloadPreferences.removeExcludeCategories(),
             downloadPreferences.downloadNewChapterCategories(),
             downloadPreferences.downloadNewChapterCategoriesExclude(),
         )
         categoryPreferences.forEach { preference ->
             val ids = preference.get()
-            val newIds = ids.filterNot { it.toLong() in categoryIdsToDelete }
+            val newIds = ids.filterNot { it.toLong() in categoryIdsToDelete }.toSet()
             if (newIds.size != ids.size) {
                 preference.set(newIds)
             }

@@ -6,6 +6,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.anime.repository.AnimeCategoryRepository
 import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.download.service.DownloadPreferences
+import tachiyomi.domain.entries.anime.model.AnimeUpdate
 import tachiyomi.domain.entries.anime.repository.AnimeRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 
@@ -26,18 +27,25 @@ class DeleteAnimeCategory(
             }
         }
         
-        val categoryIdsToDelete = listOf(categoryId) + getAllChildIds(categoryId)
+        val categoryIdsToDelete = listOf(categoryId).plus(getAllChildIds(categoryId)).toSet()
         
-        for (id in categoryIdsToDelete) {
+        val allLibraryAnime = animeRepository.getLibraryAnime()
+        val animeIdsInCategories = allLibraryAnime
+            .filter { it.category in categoryIdsToDelete }
+            .map { it.id }
+        
+        if (animeIdsInCategories.isNotEmpty()) {
+            val updates = animeIdsInCategories.map { id ->
+                AnimeUpdate(id = id, favorite = false)
+            }
             try {
-                val animesInCategory = animeRepository.getAnimesByCategoryId(id)
-                for (anime in animesInCategory) {
-                    animeRepository.updateFavorite(anime.id, false)
-                }
+                animeRepository.updateAllAnime(updates)
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
             }
-            
+        }
+        
+        for (id in categoryIdsToDelete) {
             try {
                 categoryRepository.deleteAnimeCategory(id)
             } catch (e: Exception) {
@@ -68,7 +76,7 @@ class DeleteAnimeCategory(
         )
         categoryPreferences.forEach { preference ->
             val ids = preference.get()
-            val newIds = ids.filterNot { it.toLong() in categoryIdsToDelete }
+            val newIds = ids.filterNot { it.toLong() in categoryIdsToDelete }.toSet()
             if (newIds.size != ids.size) {
                 preference.set(newIds)
             }

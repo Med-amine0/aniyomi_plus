@@ -13,6 +13,7 @@ class BackupCategory(
     // Bump by 100 to specify this is a 0.x value
     @ProtoNumber(100) var flags: Long = 0,
     @ProtoNumber(101) var parentId: Long? = null,
+    @ProtoNumber(102) var thumbnailUrl: String? = null,
 ) {
     fun toCategory(id: Long) = Category(
         id = id,
@@ -21,6 +22,7 @@ class BackupCategory(
         order = this@BackupCategory.order,
         hidden = false,
         parentId = this@BackupCategory.parentId,
+        thumbnailUrl = this@BackupCategory.thumbnailUrl,
     )
 }
 
@@ -31,5 +33,6 @@ val backupCategoryMapper = { category: Category ->
         order = category.order,
         flags = category.flags,
         parentId = category.parentId,
+        thumbnailUrl = category.thumbnailUrl,
     )
 }

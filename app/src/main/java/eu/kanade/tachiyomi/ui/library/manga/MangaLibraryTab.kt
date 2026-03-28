@@ -126,7 +126,7 @@ data object MangaLibraryTab : Tab {
 
         val defaultTitle = stringResource(AYMR.strings.label_manga_library)
 
-        val mangaColumns by screenModel.getColumnsPreferenceForCurrentOrientation(true)
+        val mangaColumns = screenModel.getColumnsPreferenceForCurrentOrientation(true)
 
         Scaffold(
             topBar = { scrollBehavior ->
@@ -170,8 +170,8 @@ data object MangaLibraryTab : Tab {
                     onSearchQueryChange = screenModel::search,
                     scrollBehavior = scrollBehavior.takeIf { !tabVisible }, // For scroll overlay when no tab
                     navigateUp = navigateUp,
-                    columnCount = mangaColumns.get(),
-                    onColumnCountChange = { mangaColumns.set(it) },
+                    columnCount = mangaColumns.value,
+                    onColumnCountChange = { mangaColumns.value = it },
                 )
             },
             bottomBar = {

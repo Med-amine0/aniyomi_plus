@@ -119,7 +119,7 @@ data object AnimeLibraryTab : Tab {
 
         val defaultTitle = stringResource(AYMR.strings.label_anime_library)
 
-        val animeColumns by screenModel.getColumnsPreferenceForCurrentOrientation(true)
+        val animeColumns = screenModel.getColumnsPreferenceForCurrentOrientation(true)
 
         Scaffold(
             topBar = { scrollBehavior ->
@@ -162,8 +162,8 @@ data object AnimeLibraryTab : Tab {
                     searchQuery = state.searchQuery,
                     onSearchQueryChange = screenModel::search,
                     scrollBehavior = scrollBehavior.takeIf { !tabVisible }, // For scroll overlay when no tab
-                    columnCount = animeColumns.get(),
-                    onColumnCountChange = { animeColumns.set(it) },
+                    columnCount = animeColumns.value,
+                    onColumnCountChange = { animeColumns.value = it },
                 )
             },
             bottomBar = {
