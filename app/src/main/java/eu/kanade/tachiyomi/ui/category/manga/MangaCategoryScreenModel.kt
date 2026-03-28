@@ -58,9 +58,9 @@ class MangaCategoryScreenModel(
         }
     }
 
-    fun createCategory(name: String) {
+    fun createCategory(name: String, parentId: Long? = null) {
         screenModelScope.launch {
-            when (createCategoryWithName.await(name)) {
+            when (createCategoryWithName.await(name, parentId)) {
                 is CreateMangaCategoryWithName.Result.InternalError -> _events.send(
                     MangaCategoryEvent.InternalError,
                 )
@@ -134,7 +134,7 @@ class MangaCategoryScreenModel(
 }
 
 sealed interface MangaCategoryDialog {
-    data object Create : MangaCategoryDialog
+    data class Create(val parentId: Long?) : MangaCategoryDialog
     data class Rename(val category: Category) : MangaCategoryDialog
     data class Delete(val category: Category) : MangaCategoryDialog
 }

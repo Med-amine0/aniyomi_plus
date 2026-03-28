@@ -61,6 +61,7 @@ class MangaCategoryRepositoryImpl(
                 name = category.name,
                 order = category.order,
                 flags = category.flags,
+                parentId = category.parentId,
             )
         }
     }
@@ -85,6 +86,7 @@ class MangaCategoryRepositoryImpl(
             order = update.order,
             flags = update.flags,
             hidden = update.hidden?.let { if (it) 1L else 0L },
+            parentId = update.parentId,
             categoryId = update.id,
         )
     }
@@ -103,12 +105,29 @@ class MangaCategoryRepositoryImpl(
         }
     }
 
+    override suspend fun getChildMangaCategories(parentId: Long): List<Category> {
+        return handler.awaitList { categoriesQueries.getChildCategories(parentId, ::mapCategory) }
+    }
+
+    override suspend fun getRootMangaCategories(): List<Category> {
+        return handler.awaitList { categoriesQueries.getRootCategories(::mapCategory) }
+    }
+
+    override fun getChildMangaCategoriesAsFlow(parentId: Long): Flow<List<Category>> {
+        return handler.subscribeToList { categoriesQueries.getChildCategories(parentId, ::mapCategory) }
+    }
+
+    override fun getRootMangaCategoriesAsFlow(): Flow<List<Category>> {
+        return handler.subscribeToList { categoriesQueries.getRootCategories(::mapCategory) }
+    }
+
     private fun mapCategory(
         id: Long,
         name: String,
         order: Long,
         flags: Long,
         hidden: Long,
+        parentId: Long?,
     ): Category {
         return Category(
             id = id,
@@ -116,6 +135,7 @@ class MangaCategoryRepositoryImpl(
             order = order,
             flags = flags,
             hidden = hidden == 1L,
+            parentId = parentId,
         )
     }
 }

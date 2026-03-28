@@ -12,9 +12,17 @@ interface AnimeCategoryRepository {
 
     suspend fun getAllVisibleAnimeCategories(): List<Category>
 
+    suspend fun getChildAnimeCategories(parentId: Long): List<Category>
+
+    suspend fun getRootAnimeCategories(): List<Category>
+
     fun getAllAnimeCategoriesAsFlow(): Flow<List<Category>>
 
     fun getAllVisibleAnimeCategoriesAsFlow(): Flow<List<Category>>
+
+    fun getChildAnimeCategoriesAsFlow(parentId: Long): Flow<List<Category>>
+
+    fun getRootAnimeCategoriesAsFlow(): Flow<List<Category>>
 
     suspend fun getCategoriesByAnimeId(animeId: Long): List<Category>
 

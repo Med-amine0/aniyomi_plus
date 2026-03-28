@@ -8,6 +8,17 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import eu.kanade.presentation.category.AnimeCategoryScreen
 import eu.kanade.presentation.category.components.CategoryCreateDialog
 import eu.kanade.presentation.category.components.CategoryDeleteDialog
@@ -24,6 +35,9 @@ fun Screen.animeCategoryTab(): TabContent {
 
     val state by screenModel.state.collectAsState()
 
+    var navigationStack by remember { mutableStateOf(listOf<Long?>(null)) }
+    val currentParentId = navigationStack.last()
+
     return TabContent(
         titleRes = AYMR.strings.label_anime,
         searchEnabled = false,
@@ -32,22 +46,36 @@ fun Screen.animeCategoryTab(): TabContent {
                 LoadingScreen()
             } else {
                 val successState = state as AnimeCategoryScreenState.Success
+                val currentCategories = successState.categories.filter { it.parentId == currentParentId }
+                val currentState = successState.copy(categories = currentCategories.toImmutableList())
 
-                AnimeCategoryScreen(
-                    state = successState,
-                    onClickCreate = { screenModel.showDialog(AnimeCategoryDialog.Create) },
-                    onClickRename = { screenModel.showDialog(AnimeCategoryDialog.Rename(it)) },
-                    onClickHide = screenModel::hideCategory,
-                    onClickDelete = { screenModel.showDialog(AnimeCategoryDialog.Delete(it)) },
-                    onChangeOrder = screenModel::changeOrder,
-                )
+                Column {
+                    if (navigationStack.size > 1) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { navigationStack = navigationStack.dropLast(1) }) {
+                                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                            }
+                            Text(text = "Subcategories")
+                        }
+                    }
+
+                    AnimeCategoryScreen(
+                        state = currentState,
+                        onClickCategory = { navigationStack = navigationStack + it.id },
+                        onClickCreate = { screenModel.showDialog(AnimeCategoryDialog.Create(currentParentId)) },
+                        onClickRename = { screenModel.showDialog(AnimeCategoryDialog.Rename(it)) },
+                        onClickHide = screenModel::hideCategory,
+                        onClickDelete = { screenModel.showDialog(AnimeCategoryDialog.Delete(it)) },
+                        onChangeOrder = screenModel::changeOrder,
+                    )
+                }
 
                 when (val dialog = successState.dialog) {
                     null -> {}
-                    AnimeCategoryDialog.Create -> {
+                    is AnimeCategoryDialog.Create -> {
                         CategoryCreateDialog(
                             onDismissRequest = screenModel::dismissDialog,
-                            onCreate = screenModel::createCategory,
+                            onCreate = { screenModel.createCategory(it, dialog.parentId) },
                             categories = successState.categories.fastMap { it.name }.toImmutableList(),
                         )
                     }

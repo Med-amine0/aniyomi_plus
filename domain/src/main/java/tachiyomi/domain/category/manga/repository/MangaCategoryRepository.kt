@@ -12,9 +12,17 @@ interface MangaCategoryRepository {
 
     suspend fun getAllVisibleMangaCategories(): List<Category>
 
+    suspend fun getChildMangaCategories(parentId: Long): List<Category>
+
+    suspend fun getRootMangaCategories(): List<Category>
+
     fun getAllMangaCategoriesAsFlow(): Flow<List<Category>>
 
     fun getAllVisibleMangaCategoriesAsFlow(): Flow<List<Category>>
+
+    fun getChildMangaCategoriesAsFlow(parentId: Long): Flow<List<Category>>
+
+    fun getRootMangaCategoriesAsFlow(): Flow<List<Category>>
 
     suspend fun getCategoriesByMangaId(mangaId: Long): List<Category>
 

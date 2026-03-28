@@ -17,7 +17,12 @@ class ReorderAnimeCategory(
 
     suspend fun await(category: Category, newIndex: Int) = withNonCancellableContext {
         mutex.withLock {
-            val categories = categoryRepository.getAllAnimeCategories()
+            val categoriesList = if (category.parentId != null) {
+                categoryRepository.getChildAnimeCategories(category.parentId!!)
+            } else {
+                categoryRepository.getRootAnimeCategories()
+            }
+            val categories = categoriesList
                 .filterNot(Category::isSystemCategory)
                 .toMutableList()
 

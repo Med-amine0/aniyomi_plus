@@ -28,6 +28,7 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 @Composable
 fun MangaCategoryScreen(
     state: MangaCategoryScreenState.Success,
+    onClickCategory: (Category) -> Unit,
     onClickCreate: () -> Unit,
     onClickRename: (Category) -> Unit,
     onClickHide: (Category) -> Unit,
@@ -55,6 +56,7 @@ fun MangaCategoryScreen(
             categories = state.categories,
             lazyListState = lazyListState,
             paddingValues = paddingValues,
+            onClickCategory = onClickCategory,
             onClickRename = onClickRename,
             onClickHide = onClickHide,
             onClickDelete = onClickDelete,
@@ -68,6 +70,7 @@ private fun CategoryContent(
     categories: List<Category>,
     lazyListState: LazyListState,
     paddingValues: PaddingValues,
+    onClickCategory: (Category) -> Unit,
     onClickRename: (Category) -> Unit,
     onClickHide: (Category) -> Unit,
     onClickDelete: (Category) -> Unit,
@@ -101,6 +104,7 @@ private fun CategoryContent(
                 CategoryListItem(
                     modifier = Modifier.animateItem(),
                     category = category,
+                    onClick = { onClickCategory(category) },
                     onRename = { onClickRename(category) },
                     onHide = { onClickHide(category) },
                     onDelete = { onClickDelete(category) },

@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -25,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.unit.dp
 import eu.kanade.core.preference.asToggleableState
 import eu.kanade.presentation.category.visualName
 import kotlinx.collections.immutable.ImmutableList
@@ -223,6 +228,9 @@ fun ChangeCategoryDialog(
         return
     }
     var selection by remember { mutableStateOf(initialSelection) }
+    var navigationStack by remember { mutableStateOf(listOf<Long?>(null)) }
+    val currentParentId = navigationStack.last()
+
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
@@ -255,13 +263,29 @@ fun ChangeCategoryDialog(
             }
         },
         title = {
-            Text(text = stringResource(MR.strings.action_move_category))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (navigationStack.size > 1) {
+                    IconButton(onClick = { 
+                        navigationStack = navigationStack.dropLast(1)
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+                Text(text = stringResource(MR.strings.action_move_category))
+            }
         },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                selection.forEach { checkbox ->
+                val currentLevelSelection = selection.filter { it.value.parentId == currentParentId }
+                if (currentLevelSelection.isEmpty()) {
+                    Text(text = "Empty", modifier = Modifier.padding(16.dp))
+                }
+                currentLevelSelection.forEach { checkbox ->
                     val onChange: (CheckboxState<Category>) -> Unit = {
                         val index = selection.indexOf(it)
                         if (index != -1) {
@@ -270,10 +294,11 @@ fun ChangeCategoryDialog(
                             selection = mutableList.toList().toImmutableList()
                         }
                     }
+                    val hasChildren = selection.any { it.value.parentId == checkbox.value.id }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onChange(checkbox) },
+                            .clickable { if (hasChildren) navigationStack = navigationStack + checkbox.value.id else onChange(checkbox) },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         when (checkbox) {
@@ -293,8 +318,14 @@ fun ChangeCategoryDialog(
 
                         Text(
                             text = checkbox.value.visualName,
-                            modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium),
+                            modifier = Modifier.padding(horizontal = MaterialTheme.padding.medium).weight(1f),
                         )
+                        
+                        if (hasChildren) {
+                            TextButton(onClick = { navigationStack = navigationStack + checkbox.value.id }) {
+                                Text("Open >")
+                            }
+                        }
                     }
                 }
             }

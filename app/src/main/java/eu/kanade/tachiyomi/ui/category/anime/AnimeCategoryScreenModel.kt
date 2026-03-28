@@ -58,9 +58,9 @@ class AnimeCategoryScreenModel(
         }
     }
 
-    fun createCategory(name: String) {
+    fun createCategory(name: String, parentId: Long? = null) {
         screenModelScope.launch {
-            when (createCategoryWithName.await(name)) {
+            when (createCategoryWithName.await(name, parentId)) {
                 is CreateAnimeCategoryWithName.Result.InternalError -> _events.send(
                     AnimeCategoryEvent.InternalError,
                 )
@@ -134,7 +134,7 @@ class AnimeCategoryScreenModel(
 }
 
 sealed interface AnimeCategoryDialog {
-    data object Create : AnimeCategoryDialog
+    data class Create(val parentId: Long?) : AnimeCategoryDialog
     data class Rename(val category: Category) : AnimeCategoryDialog
     data class Delete(val category: Category) : AnimeCategoryDialog
 }

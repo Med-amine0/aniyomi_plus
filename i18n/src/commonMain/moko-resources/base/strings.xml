@@ -10,6 +10,9 @@
     <string name="action_menu_overflow_description">More options</string>
     <string name="action_bar_up_description">Navigate up</string>
 
+    <!-- App name -->
+    <string name="app_name">Aniyomi Nested</string>
+
     <!-- Models -->
     <string name="name">Name</string>
     <string name="categories">Categories</string>

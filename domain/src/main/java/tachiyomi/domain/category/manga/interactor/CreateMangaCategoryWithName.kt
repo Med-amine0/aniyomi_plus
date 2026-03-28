@@ -18,8 +18,12 @@ class CreateMangaCategoryWithName(
             return sort.type.flag or sort.direction.flag
         }
 
-    suspend fun await(name: String): Result = withNonCancellableContext {
-        val categories = categoryRepository.getAllMangaCategories()
+    suspend fun await(name: String, parentId: Long? = null): Result = withNonCancellableContext {
+        val categories = if (parentId != null) {
+            categoryRepository.getChildMangaCategories(parentId)
+        } else {
+            categoryRepository.getRootMangaCategories()
+        }
         val nextOrder = categories.maxOfOrNull { it.order }?.plus(1) ?: 0
         val newCategory = Category(
             id = 0,
@@ -27,6 +31,7 @@ class CreateMangaCategoryWithName(
             order = nextOrder,
             flags = initialFlags,
             hidden = false,
+            parentId = parentId,
         )
 
         try {

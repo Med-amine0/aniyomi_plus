@@ -1,0 +1,221 @@
+SURGICAL BRIEF
+Aniyomi — Nested Library Restructure
+Version 1.0  |  Base: aniyomi-main (Nov 2025)  |  Lang: Kotlin + Jetpack Compose
+1. OVERVIEW
+This brief documents the exact changes required to transform Aniyomi's flat category system into an infinitely nestable, card-based library organizer — without breaking any existing functionality.
+The goal is a surgical fork: minimum code touched, maximum behaviour preserved.
+2. TARGET BEHAVIOUR
+2.1 Hierarchy
+The new system is a free-depth tree. Every node is a card. There is no enforced depth limit.
+Structure example:
+Anime (root)
+  └── Isekai  [GROUP CARD]
+       ├── In Another World  [ENTRY CARD — single season]
+       └── Chained Soldier  [GROUP CARD — cover = S1 art]
+            ├── Season 1  [ENTRY CARD]
+            └── Season 2  [ENTRY CARD]
+2.2 Card Rules
+ENTRY CARD — has play button + episode/chapter count badge. Tapping opens the player/reader flow.
+GROUP CARD — shows cover art of its first child entry. No play button. Tapping navigates one level deeper.
+Any level can mix GROUP CARDS and ENTRY CARDS freely side by side.
+Hold + drag to reorder cards — drag is constrained to the same level only (cannot drag across parent boundary).
+2.3 Navigation
+Top-level tabs (Anime / Manga) remain as-is.
+Inside each tab, the category tabs become top-level GROUP CARDS in a grid — NOT horizontal tabs.
+Navigating deeper replaces the current grid view (back button returns one level up).
+Breadcrumb trail shown at top so user always knows where they are.
+2.4 Add to Library (Favorite) Flow
+When user hits favourite on a browse entry, a tree-navigator popup opens.
+Popup shows current level as a small card gallery.
+User taps to go deeper, or taps 'Add here' to drop the entry at current level.
+User can also create a new group at any level from within the popup.
+3. DO NOT TOUCH — SAFE ZONES
+These systems must be left completely intact:
+All episode/chapter logic, player, reader
+Extensions and source system
+Download manager
+AniList / MAL / Kitsu tracker integrations
+Tags on entries (remain on entries, not on categories)
+Filter and sort logic (applied at whatever level user is viewing)
+Updates tab
+Browse tab
+History tab
+Settings
+Sorting and display mode (grid / comfortable grid / list) stays per-level, using existing flags mechanism.
+4. DATABASE CHANGES
+This is the foundational change. Everything else flows from it.
+4.1 Migration — Add parent_id to categories
+File: data/src/main/sqldelightanime/dataanime/categories.sq
+File: data/src/main/sqldelight/data/categories.sq
+Add a new column to the categories table:
+ALTER TABLE categories ADD COLUMN parent_id INTEGER DEFAULT NULL;
+All existing categories get parent_id = NULL (they are top-level). No data is lost.
+Create a proper Android Room / SQLDelight migration file so existing installs upgrade cleanly.
+4.2 Updated categories table schema
+CREATE TABLE categories(
+    _id        INTEGER NOT NULL PRIMARY KEY,
+    name       TEXT    NOT NULL,
+    sort       INTEGER NOT NULL,
+    flags      INTEGER NOT NULL,
+    hidden     INTEGER NOT NULL DEFAULT 0,
+    parent_id  INTEGER DEFAULT NULL,          -- NEW
+    FOREIGN KEY(parent_id) REFERENCES categories(_id) ON DELETE CASCADE
+);
+ON DELETE CASCADE means deleting a group automatically deletes all its children recursively.
+4.3 New queries needed
+getChildCategories(parentId) — get all categories where parent_id = :parentId
+getRootCategories() — get all categories where parent_id IS NULL
+getCategoryWithChildren(id) — recursive query for backup/restore
+The existing getCategories and getVisibleCategories queries can remain for legacy compatibility during transition.
+5. DOMAIN / MODEL CHANGES
+5.1 Category model
+File: domain/src/main/java/tachiyomi/domain/category/model/Category.kt
+Current:
+data class Category(
+    val id: Long,
+    val name: String,
+    val order: Long,
+    val flags: Long,
+    val hidden: Boolean,
+)
+Updated — add one field:
+data class Category(
+    val id: Long,
+    val name: String,
+    val order: Long,
+    val flags: Long,
+    val hidden: Boolean,
+    val parentId: Long? = null,    // NEW — null = top level
+)
+5.2 CategoryUpdate model
+File: domain/src/main/java/tachiyomi/domain/category/model/CategoryUpdate.kt
+Add: val parentId: Long? = null to the update model so parent can be changed.
+5.3 BackupCategory model
+File: app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupCategory.kt
+Add @ProtoNumber(101) var parentId: Long? = null so nesting survives backup/restore.
+During restore, categories must be restored in parent-first order (root categories before their children).
+5.4 Interactors to update
+ReorderAnimeCategory / ReorderMangaCategory
+File: domain/.../category/anime/interactor/ReorderAnimeCategory.kt
+Current logic reorders across ALL categories globally.
+New logic: filter to only categories sharing the same parent_id before reordering.
+Reordering must never move a category outside its parent level.
+CreateAnimeCategoryWithName / CreateMangaCategoryWithName
+Add a parentId parameter. When creating a category inside a group, pass the parent's id.
+DeleteAnimeCategory / DeleteMangaCategory
+No changes needed — ON DELETE CASCADE in the DB handles recursive deletion automatically.
+SetAnimeCategories / SetMangaCategories
+No changes needed — entries are still assigned to a category by id. The nesting lives in the category tree, not the entry assignment.
+GetAnimeCategories / GetVisibleAnimeCategories
+Add new variants: GetChildAnimeCategories(parentId) and GetRootAnimeCategories() to support level-by-level navigation.
+6. UI CHANGES
+6.1 AnimeLibraryContent / MangaLibraryContent
+File: app/.../presentation/library/anime/AnimeLibraryContent.kt
+Currently: renders a horizontal tab pager where each tab = one category.
+New behaviour:
+Remove the LibraryTabs horizontal tab strip for categories.
+Replace with a grid of GROUP CARDS at the root level (one card per top-level category).
+Tapping a GROUP CARD pushes the next level onto the navigation stack.
+Tapping an ENTRY CARD opens the existing anime/manga detail screen — no change here.
+Back button pops one level. Breadcrumb at the top shows current path.
+6.2 New composable: CategoryGridScreen
+This is the main new UI component. It renders the current level of the tree.
+Props it needs:
+currentCategoryId: Long? — null = root level
+onNavigateInto(category: Category) — called when tapping a group card
+onOpenEntry(animeId: Long) — called when tapping an entry card
+onReorder(from: Int, to: Int) — drag/drop within this level
+Card rendering logic:
+If item is a Category: render GROUP CARD (cover = first child entry's thumbnail, no play button)
+If item is a LibraryAnime: render ENTRY CARD (existing CommonEntryItem component, unchanged)
+6.3 Drag and drop
+Use Compose drag-and-drop (existing reorder libraries compatible with Compose, e.g. reorderable).
+Long press activates drag on any card.
+Dragging is constrained to cards at the same level in the same parent.
+On drop, call ReorderAnimeCategory or a new ReorderEntriesInGroup interactor depending on card type.
+Entries (anime) within a group need a sort order field — see Section 7.
+6.4 CategoryDialogs — Add to Library picker
+File: app/.../presentation/category/components/CategoryDialogs.kt
+Replace the flat CheckboxList dialog with a tree navigator dialog:
+Opens at root level showing top-level category cards.
+Tap any GROUP CARD to drill deeper.
+'Add here' button visible at every level.
+'New group' button to create a sub-group on the fly.
+Back button navigates up within the dialog.
+Breadcrumb inside dialog shows current path.
+6.5 Category management screen
+File: app/.../ui/category/anime/AnimeCategoryScreenModel.kt
+Currently manages categories as a flat drag-sortable list.
+New behaviour: show only the current level. User navigates into groups to manage deeper levels.
+Add/rename/delete/reorder all operate on the currently viewed level only.
+7. ENTRY ORDERING WITHIN GROUPS
+Currently, the order of entries inside a category is controlled by sort flags (alphabetical, by last watched, etc). That stays.
+However, to support manual drag reordering of entries within a group, a sort_order field per entry-per-category may be needed.
+Recommended approach:
+Add a sort_order column to animes_categories (and mangas_categories) join table.
+Default to 0. When user manually drags an entry, update sort_order for that entry in that category.
+Manual sort mode becomes a new sort option alongside existing alphabetical/last-watched etc.
+This is an additive change — existing sort behaviour is unaffected unless user explicitly chooses manual sort.
+8. FILES CHANGE SUMMARY
+File
+Change Type
+Risk
+categories.sq (both anime + manga)
+DB migration — add parent_id
+HIGH — migration must be tested
+animes_categories.sq / mangas_categories.sq
+Add sort_order column
+MEDIUM
+Category.kt
+Add parentId field
+LOW
+CategoryUpdate.kt
+Add parentId field
+LOW
+BackupCategory.kt
+Add parentId for backup
+MEDIUM — restore order matters
+ReorderAnimeCategory.kt
+Scope reorder to same parent
+MEDIUM
+CreateAnimeCategoryWithName.kt
+Add parentId param
+LOW
+GetAnimeCategories.kt
+Add child/root variants
+LOW
+AnimeLibraryContent.kt
+Replace tab pager with grid nav
+HIGH — core UI change
+CategoryGridScreen.kt
+NEW FILE — main new UI
+HIGH — new component
+CategoryDialogs.kt
+Replace flat list with tree nav
+MEDIUM
+AnimeCategoryScreenModel.kt
+Scope to current level
+MEDIUM
+AnimeCategoryRepositoryImpl.kt
+Implement new queries
+MEDIUM
+9. RECOMMENDED ORDER OF OPERATIONS
+Follow this order to avoid breaking the build at any stage:
+DB migration — add parent_id and sort_order columns. Write and test migration.
+Update Category model and CategoryUpdate model.
+Update repository impl to map new DB column.
+Add new interactors (GetChildCategories, GetRootCategories).
+Update ReorderAnimeCategory to scope to same parent.
+Build CategoryGridScreen composable (new file).
+Replace AnimeLibraryContent tab pager with CategoryGridScreen.
+Rebuild CategoryDialogs into tree navigator.
+Update BackupCategory for parentId.
+Update applicationId in app/build.gradle.kts so both APKs can coexist.
+10. PACKAGE NAME CHANGE
+To allow both the original Aniyomi and this fork to be installed simultaneously, change the applicationId in app/build.gradle.kts:
+// BEFORE
+applicationId = "xyz.jmir.tachiyomi.mi"
+// AFTER — choose any unique name
+applicationId = "com.yourname.aniyomix"
+Also update the app_name string in res/values/strings.xml to distinguish it visually on the home screen.
+End of Brief

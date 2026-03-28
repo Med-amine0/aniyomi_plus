@@ -28,6 +28,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun ReorderableCollectionItemScope.CategoryListItem(
     category: Category,
+    onClick: () -> Unit,
     onRename: () -> Unit,
     onHide: () -> Unit,
     onDelete: () -> Unit,
@@ -37,7 +38,7 @@ fun ReorderableCollectionItemScope.CategoryListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onRename)
+                .clickable(onClick = onClick)
                 .padding(vertical = MaterialTheme.padding.small)
                 .padding(
                     start = MaterialTheme.padding.small,
