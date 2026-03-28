@@ -126,6 +126,8 @@ data object MangaLibraryTab : Tab {
 
         val defaultTitle = stringResource(AYMR.strings.label_manga_library)
 
+        val mangaColumns by screenModel.getColumnsPreferenceForCurrentOrientation(true)
+
         Scaffold(
             topBar = { scrollBehavior ->
                 val title = state.getToolbarTitle(
@@ -168,12 +170,15 @@ data object MangaLibraryTab : Tab {
                     onSearchQueryChange = screenModel::search,
                     scrollBehavior = scrollBehavior.takeIf { !tabVisible }, // For scroll overlay when no tab
                     navigateUp = navigateUp,
+                    columnCount = mangaColumns.get(),
+                    onColumnCountChange = { mangaColumns.set(it) },
                 )
             },
             bottomBar = {
                 LibraryBottomActionMenu(
                     visible = state.selectionMode,
                     onChangeCategoryClicked = screenModel::openChangeCategoryDialog,
+                    onCreateCategoryClicked = { screenModel.createCategoryFromSelection() },
                     onMarkAsViewedClicked = { screenModel.markReadSelection(true) },
                     onMarkAsUnviewedClicked = { screenModel.markReadSelection(false) },
                     onDownloadClicked = screenModel::runDownloadActionSelection
@@ -241,6 +246,7 @@ data object MangaLibraryTab : Tab {
                                 GlobalMangaSearchScreen(screenModel.state.value.searchQuery ?: ""),
                             )
                         },
+                        onCurrentCategoryChanged = { screenModel.currentCategoryId = it },
                         getNumberOfMangaForCategory = { state.getMangaCountForCategory(it) },
                         getDisplayMode = { screenModel.getDisplayMode() },
                         getColumnsForOrientation = {

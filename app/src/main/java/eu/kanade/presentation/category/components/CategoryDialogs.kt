@@ -332,3 +332,84 @@ fun ChangeCategoryDialog(
         },
     )
 }
+
+@Composable
+fun ThumbnailUrlDialog(
+    currentUrl: String?,
+    onDismissRequest: () -> Unit,
+    onConfirm: (String?) -> Unit,
+) {
+    var url by remember { mutableStateOf(currentUrl ?: "") }
+    var useDefault by remember { mutableStateOf(currentUrl == null) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(if (useDefault) null else url.ifBlank { null })
+                    onDismissRequest()
+                },
+            ) {
+                Text(text = stringResource(MR.strings.action_ok))
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = {
+                    onConfirm(null)
+                    onDismissRequest()
+                }) {
+                    Text(text = stringResource(MR.strings.action_clear_thumbnail))
+                }
+                TextButton(onClick = onDismissRequest) {
+                    Text(text = stringResource(MR.strings.action_cancel))
+                }
+            }
+        },
+        title = {
+            Text(text = stringResource(MR.strings.thumbnail_url_dialog_title))
+        },
+        text = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { useDefault = true }
+                        .padding(vertical = 8.dp),
+                ) {
+                    Checkbox(
+                        checked = useDefault,
+                        onCheckedChange = { useDefault = it },
+                    )
+                    Text(text = "Use default (first entry thumbnail)")
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { useDefault = false }
+                        .padding(vertical = 8.dp),
+                ) {
+                    Checkbox(
+                        checked = !useDefault,
+                        onCheckedChange = { useDefault = !it },
+                    )
+                    Text(text = stringResource(MR.strings.action_set_thumbnail_url))
+                }
+                if (!useDefault) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text(stringResource(MR.strings.thumbnail_url_hint)) },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    )
+                }
+            }
+        },
+    )
+}

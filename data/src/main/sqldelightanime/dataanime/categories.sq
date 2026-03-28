@@ -5,6 +5,7 @@ CREATE TABLE categories(
     flags INTEGER NOT NULL,
     hidden INTEGER NOT NULL DEFAULT 0,
     parent_id INTEGER DEFAULT NULL,
+    thumbnail_url TEXT DEFAULT NULL,
     FOREIGN KEY(parent_id) REFERENCES categories(_id) ON DELETE CASCADE
 );
 
@@ -32,7 +33,8 @@ name,
 sort AS `order`,
 flags,
 hidden,
-parent_id
+parent_id,
+thumbnail_url
 FROM categories
 ORDER BY sort;
 
@@ -43,7 +45,8 @@ name,
 sort AS `order`,
 flags,
 hidden,
-parent_id
+parent_id,
+thumbnail_url
 FROM categories
 WHERE hidden = 0
 ORDER BY sort;
@@ -55,7 +58,8 @@ C.name,
 C.sort AS `order`,
 C.flags,
 C.hidden,
-C.parent_id
+C.parent_id,
+C.thumbnail_url
 FROM categories C
 JOIN animes_categories AC
 ON C._id = AC.category_id
@@ -68,15 +72,16 @@ C.name,
 C.sort AS `order`,
 C.flags,
 C.hidden,
-C.parent_id
+C.parent_id,
+C.thumbnail_url
 FROM categories C
 JOIN animes_categories AC
 ON C._id = AC.category_id
 WHERE AC.anime_id = :animeId AND C.hidden = 0;
 
 insert:
-INSERT INTO categories(name, sort, flags, parent_id)
-VALUES (:name, :order, :flags, :parentId);
+INSERT INTO categories(name, sort, flags, parent_id, thumbnail_url)
+VALUES (:name, :order, :flags, :parentId, :thumbnailUrl);
 
 delete:
 DELETE FROM categories
@@ -88,7 +93,8 @@ SET name = coalesce(:name, name),
     sort = coalesce(:order, sort),
     flags = coalesce(:flags, flags),
     hidden = coalesce(:hidden, hidden),
-    parent_id = coalesce(:parentId, parent_id)
+    parent_id = coalesce(:parentId, parent_id),
+    thumbnail_url = :thumbnailUrl
 WHERE _id = :categoryId;
 
 updateAllFlags:
@@ -105,7 +111,8 @@ name,
 sort AS `order`,
 flags,
 hidden,
-parent_id
+parent_id,
+thumbnail_url
 FROM categories
 WHERE parent_id = :parentId
 ORDER BY sort;
@@ -117,7 +124,8 @@ name,
 sort AS `order`,
 flags,
 hidden,
-parent_id
+parent_id,
+thumbnail_url
 FROM categories
 WHERE parent_id IS NULL
 ORDER BY sort;

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Aniyomi</string>
+    <string name="app_name" translatable="false">Aniyomi Plus</string>
 
     <!-- Generic strings -->
     <string name="on">On</string>
@@ -11,7 +11,7 @@
     <string name="action_bar_up_description">Navigate up</string>
 
     <!-- App name -->
-    <string name="app_name">Aniyomi Nested</string>
+    <string name="app_name">Aniyomi Plus</string>
 
     <!-- Models -->
     <string name="name">Name</string>
@@ -98,6 +98,16 @@
     <string name="action_edit_categories">Edit categories</string>
     <string name="action_rename_category">Rename category</string>
     <string name="action_move_category">Set categories</string>
+    <string name="action_create_category_from_selection">Create category</string>
+    <string name="action_columns_per_row">Columns per row</string>
+    <string name="action_move_category_up">Move up</string>
+    <string name="action_move_category_down">Move down</string>
+    <string name="action_move_category_to_parent">Move to parent</string>
+    <string name="action_edit_thumbnail">Edit thumbnail</string>
+    <string name="action_set_thumbnail_url">Set thumbnail URL</string>
+    <string name="action_clear_thumbnail">Clear thumbnail</string>
+    <string name="thumbnail_url_dialog_title">Thumbnail URL</string>
+    <string name="thumbnail_url_hint">Enter image URL</string>
     <string name="delete_category_confirmation">Do you wish to delete the category \"%s\"?</string>
     <string name="delete_category">Delete category</string>
     <string name="action_edit_cover">Edit cover</string>

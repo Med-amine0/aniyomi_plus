@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.library.manga
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastDistinctBy
@@ -51,6 +52,7 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.category.manga.interactor.CreateMangaCategoryWithName
 import tachiyomi.domain.category.manga.interactor.GetVisibleMangaCategories
 import tachiyomi.domain.category.manga.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
@@ -88,6 +90,7 @@ class MangaLibraryScreenModel(
     private val setReadStatus: SetReadStatus = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
+    private val createMangaCategoryWithName: CreateMangaCategoryWithName = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: MangaCoverCache = Injekt.get(),
@@ -100,6 +103,8 @@ class MangaLibraryScreenModel(
     var activeCategoryIndex: Int by libraryPreferences.lastUsedMangaCategory().asState(
         screenModelScope,
     )
+
+    var currentCategoryId: Long? by mutableStateOf(null)
 
     init {
         screenModelScope.launchIO {
@@ -558,6 +563,30 @@ class MangaLibraryScreenModel(
 
                 setMangaCategories.await(manga.id, categoryIds)
             }
+        }
+    }
+
+    fun createCategoryFromSelection() {
+        val selection = state.value.selection
+        if (selection.isEmpty()) return
+        
+        val firstManga = selection.first().manga
+        val categoryName = firstManga.title
+        val parentId = currentCategoryId
+
+        screenModelScope.launchIO {
+            val result = createMangaCategoryWithName.await(categoryName, parentId)
+            if (result is CreateMangaCategoryWithName.Result.Success) {
+                val newCategoryId = state.value.categories.find { it.name == categoryName && it.parentId == parentId }?.id
+                if (newCategoryId != null) {
+                    val mangaList = selection.map { it.manga }
+                    mangaList.forEach { manga ->
+                        val currentCats = getCategories.await(manga.id).map { it.id }
+                        setMangaCategories.await(manga.id, currentCats + newCategoryId)
+                    }
+                }
+            }
+            clearSelection()
         }
     }
 

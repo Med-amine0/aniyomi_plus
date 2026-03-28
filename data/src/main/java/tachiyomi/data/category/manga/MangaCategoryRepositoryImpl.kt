@@ -62,6 +62,7 @@ class MangaCategoryRepositoryImpl(
                 order = category.order,
                 flags = category.flags,
                 parentId = category.parentId,
+                thumbnailUrl = category.thumbnailUrl,
             )
         }
     }
@@ -87,6 +88,7 @@ class MangaCategoryRepositoryImpl(
             flags = update.flags,
             hidden = update.hidden?.let { if (it) 1L else 0L },
             parentId = update.parentId,
+            thumbnailUrl = update.thumbnailUrl,
             categoryId = update.id,
         )
     }
@@ -128,6 +130,7 @@ class MangaCategoryRepositoryImpl(
         flags: Long,
         hidden: Long,
         parentId: Long?,
+        thumbnailUrl: String?,
     ): Category {
         return Category(
             id = id,
@@ -136,6 +139,7 @@ class MangaCategoryRepositoryImpl(
             flags = flags,
             hidden = hidden == 1L,
             parentId = parentId,
+            thumbnailUrl = thumbnailUrl,
         )
     }
 }

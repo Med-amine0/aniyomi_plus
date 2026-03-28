@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.library.anime
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastDistinctBy
@@ -53,6 +54,7 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.category.anime.interactor.CreateAnimeCategoryWithName
 import tachiyomi.domain.category.anime.interactor.GetVisibleAnimeCategories
 import tachiyomi.domain.category.anime.interactor.SetAnimeCategories
 import tachiyomi.domain.category.model.Category
@@ -90,6 +92,7 @@ class AnimeLibraryScreenModel(
     private val setSeenStatus: SetSeenStatus = Injekt.get(),
     private val updateAnime: UpdateAnime = Injekt.get(),
     private val setAnimeCategories: SetAnimeCategories = Injekt.get(),
+    private val createAnimeCategoryWithName: CreateAnimeCategoryWithName = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: AnimeCoverCache = Injekt.get(),
@@ -103,6 +106,8 @@ class AnimeLibraryScreenModel(
     var activeCategoryIndex: Int by libraryPreferences.lastUsedAnimeCategory().asState(
         screenModelScope,
     )
+
+    var currentCategoryId: Long? by mutableStateOf(null)
 
     init {
         screenModelScope.launchIO {
@@ -573,6 +578,30 @@ class AnimeLibraryScreenModel(
 
                 setAnimeCategories.await(anime.id, categoryIds)
             }
+        }
+    }
+
+    fun createCategoryFromSelection() {
+        val selection = state.value.selection
+        if (selection.isEmpty()) return
+        
+        val firstAnime = selection.first().anime
+        val categoryName = firstAnime.title
+        val parentId = currentCategoryId
+
+        screenModelScope.launchIO {
+            val result = createAnimeCategoryWithName.await(categoryName, parentId)
+            if (result is CreateAnimeCategoryWithName.Result.Success) {
+                val newCategoryId = state.value.categories.find { it.name == categoryName && it.parentId == parentId }?.id
+                if (newCategoryId != null) {
+                    val animeList = selection.map { it.anime }
+                    animeList.forEach { anime ->
+                        val currentCats = getCategories.await(anime.id).map { it.id }
+                        setAnimeCategories.await(anime.id, currentCats + newCategoryId)
+                    }
+                }
+            }
+            clearSelection()
         }
     }
 

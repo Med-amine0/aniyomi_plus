@@ -18,7 +18,9 @@ import tachiyomi.domain.category.anime.interactor.GetVisibleAnimeCategories
 import tachiyomi.domain.category.anime.interactor.HideAnimeCategory
 import tachiyomi.domain.category.anime.interactor.RenameAnimeCategory
 import tachiyomi.domain.category.anime.interactor.ReorderAnimeCategory
+import tachiyomi.domain.category.anime.repository.AnimeCategoryRepository
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -32,6 +34,7 @@ class AnimeCategoryScreenModel(
     private val deleteCategory: DeleteAnimeCategory = Injekt.get(),
     private val reorderCategory: ReorderAnimeCategory = Injekt.get(),
     private val renameCategory: RenameAnimeCategory = Injekt.get(),
+    private val categoryRepository: AnimeCategoryRepository = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
 ) : StateScreenModel<AnimeCategoryScreenState>(AnimeCategoryScreenState.Loading) {
 
@@ -111,6 +114,77 @@ class AnimeCategoryScreenModel(
                 )
                 else -> {}
             }
+        }
+    }
+
+    fun moveUp(category: Category) {
+        screenModelScope.launch {
+            val currentState = mutableState.value
+            if (currentState !is AnimeCategoryScreenState.Success) return@launch
+
+            val siblings = currentState.categories.filter { it.parentId == category.parentId }
+            val sortedSiblings = siblings.sortedBy { it.order }
+            val index = sortedSiblings.indexOfFirst { it.id == category.id }
+            if (index > 0) {
+                val prevCategory = sortedSiblings[index - 1]
+                val updates = listOf(
+                    CategoryUpdate(id = category.id, order = prevCategory.order),
+                    CategoryUpdate(id = prevCategory.id, order = category.order),
+                )
+                categoryRepository.updatePartialAnimeCategories(updates)
+            }
+        }
+    }
+
+    fun moveDown(category: Category) {
+        screenModelScope.launch {
+            val currentState = mutableState.value
+            if (currentState !is AnimeCategoryScreenState.Success) return@launch
+
+            val siblings = currentState.categories.filter { it.parentId == category.parentId }
+            val sortedSiblings = siblings.sortedBy { it.order }
+            val index = sortedSiblings.indexOfFirst { it.id == category.id }
+            if (index >= 0 && index < sortedSiblings.size - 1) {
+                val nextCategory = sortedSiblings[index + 1]
+                val updates = listOf(
+                    CategoryUpdate(id = category.id, order = nextCategory.order),
+                    CategoryUpdate(id = nextCategory.id, order = category.order),
+                )
+                categoryRepository.updatePartialAnimeCategories(updates)
+            }
+        }
+    }
+
+    fun moveToParent(category: Category) {
+        screenModelScope.launch {
+            if (category.parentId != null) {
+                val currentState = mutableState.value
+                if (currentState !is AnimeCategoryScreenState.Success) return@launch
+
+                val siblings = currentState.categories.filter { it.parentId == category.parentId }
+                val sortedSiblings = siblings.sortedBy { it.order }
+                val maxOrder = sortedSiblings.filterNot { it.id == category.id }
+                    .maxOfOrNull { it.order } ?: 0
+
+                categoryRepository.updatePartialAnimeCategory(
+                    CategoryUpdate(
+                        id = category.id,
+                        parentId = null,
+                        order = maxOrder + 1,
+                    ),
+                )
+            }
+        }
+    }
+
+    fun setThumbnail(categoryId: Long, thumbnailUrl: String?) {
+        screenModelScope.launch {
+            categoryRepository.updatePartialAnimeCategory(
+                CategoryUpdate(
+                    id = categoryId,
+                    thumbnailUrl = thumbnailUrl,
+                ),
+            )
         }
     }
 

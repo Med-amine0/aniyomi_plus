@@ -119,6 +119,8 @@ data object AnimeLibraryTab : Tab {
 
         val defaultTitle = stringResource(AYMR.strings.label_anime_library)
 
+        val animeColumns by screenModel.getColumnsPreferenceForCurrentOrientation(true)
+
         Scaffold(
             topBar = { scrollBehavior ->
                 val title = state.getToolbarTitle(
@@ -160,12 +162,15 @@ data object AnimeLibraryTab : Tab {
                     searchQuery = state.searchQuery,
                     onSearchQueryChange = screenModel::search,
                     scrollBehavior = scrollBehavior.takeIf { !tabVisible }, // For scroll overlay when no tab
+                    columnCount = animeColumns.get(),
+                    onColumnCountChange = { animeColumns.set(it) },
                 )
             },
             bottomBar = {
                 LibraryBottomActionMenu(
                     visible = state.selectionMode,
                     onChangeCategoryClicked = screenModel::openChangeCategoryDialog,
+                    onCreateCategoryClicked = { screenModel.createCategoryFromSelection() },
                     onMarkAsViewedClicked = { screenModel.markSeenSelection(true) },
                     onMarkAsUnviewedClicked = { screenModel.markSeenSelection(false) },
                     onDownloadClicked = screenModel::runDownloadActionSelection
@@ -221,6 +226,7 @@ data object AnimeLibraryTab : Tab {
                                 GlobalAnimeSearchScreen(screenModel.state.value.searchQuery ?: ""),
                             )
                         },
+                        onCurrentCategoryChanged = { screenModel.currentCategoryId = it },
                         getNumberOfAnimeForCategory = { state.getAnimeCountForCategory(it) },
                         getDisplayMode = { screenModel.getDisplayMode() },
                         getColumnsForOrientation = {

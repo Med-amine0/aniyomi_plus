@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -49,6 +49,7 @@ fun AnimeLibraryContent(
     onToggleRangeSelection: (LibraryAnime) -> Unit,
     onRefresh: (Category?) -> Boolean,
     onGlobalSearchClicked: () -> Unit,
+    onCurrentCategoryChanged: (Long?) -> Unit,
     getNumberOfAnimeForCategory: (Category) -> Int?,
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
@@ -64,13 +65,17 @@ fun AnimeLibraryContent(
         var navigationStack by remember { mutableStateOf(listOf<Category?>(null)) }
         val currentCategory = navigationStack.last()
 
+        LaunchedEffect(currentCategory) {
+            onCurrentCategoryChanged(currentCategory?.id)
+        }
+
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(currentCategory) { mutableStateOf(false) }
 
         if (navigationStack.size > 1) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { navigationStack = navigationStack.dropLast(1) }) {
-                    Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
                 Text(text = currentCategory?.name ?: "")
             }

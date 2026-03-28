@@ -50,6 +50,7 @@ fun MangaLibraryContent(
     onToggleRangeSelection: (LibraryManga) -> Unit,
     onRefresh: (Category?) -> Boolean,
     onGlobalSearchClicked: () -> Unit,
+    onCurrentCategoryChanged: (Long?) -> Unit,
     getNumberOfMangaForCategory: (Category) -> Int?,
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
@@ -64,6 +65,10 @@ fun MangaLibraryContent(
     ) {
         var navigationStack by remember { mutableStateOf(listOf<Category?>(null)) }
         val currentCategory = navigationStack.last()
+
+        LaunchedEffect(currentCategory) {
+            onCurrentCategoryChanged(currentCategory?.id)
+        }
 
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(currentCategory) { mutableStateOf(false) }

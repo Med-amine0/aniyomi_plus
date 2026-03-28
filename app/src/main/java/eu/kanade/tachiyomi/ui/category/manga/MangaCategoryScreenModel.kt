@@ -18,7 +18,9 @@ import tachiyomi.domain.category.manga.interactor.GetVisibleMangaCategories
 import tachiyomi.domain.category.manga.interactor.HideMangaCategory
 import tachiyomi.domain.category.manga.interactor.RenameMangaCategory
 import tachiyomi.domain.category.manga.interactor.ReorderMangaCategory
+import tachiyomi.domain.category.manga.repository.MangaCategoryRepository
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -32,6 +34,7 @@ class MangaCategoryScreenModel(
     private val deleteCategory: DeleteMangaCategory = Injekt.get(),
     private val reorderCategory: ReorderMangaCategory = Injekt.get(),
     private val renameCategory: RenameMangaCategory = Injekt.get(),
+    private val categoryRepository: MangaCategoryRepository = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
 ) : StateScreenModel<MangaCategoryScreenState>(MangaCategoryScreenState.Loading) {
 
@@ -111,6 +114,78 @@ class MangaCategoryScreenModel(
                 )
                 else -> {}
             }
+        }
+    }
+
+    fun moveUp(category: Category) {
+        screenModelScope.launch {
+            val currentState = mutableState.value
+            if (currentState !is MangaCategoryScreenState.Success) return@launch
+
+            val siblings = currentState.categories.filter { it.parentId == category.parentId }
+            val sortedSiblings = siblings.sortedBy { it.order }
+            val index = sortedSiblings.indexOfFirst { it.id == category.id }
+            if (index > 0) {
+                val prevCategory = sortedSiblings[index - 1]
+                val updates = listOf(
+                    CategoryUpdate(id = category.id, order = prevCategory.order),
+                    CategoryUpdate(id = prevCategory.id, order = category.order),
+                )
+                categoryRepository.updatePartialMangaCategories(updates)
+            }
+        }
+    }
+
+    fun moveDown(category: Category) {
+        screenModelScope.launch {
+            val currentState = mutableState.value
+            if (currentState !is MangaCategoryScreenState.Success) return@launch
+
+            val siblings = currentState.categories.filter { it.parentId == category.parentId }
+            val sortedSiblings = siblings.sortedBy { it.order }
+            val index = sortedSiblings.indexOfFirst { it.id == category.id }
+            if (index >= 0 && index < sortedSiblings.size - 1) {
+                val nextCategory = sortedSiblings[index + 1]
+                val updates = listOf(
+                    CategoryUpdate(id = category.id, order = nextCategory.order),
+                    CategoryUpdate(id = nextCategory.id, order = category.order),
+                )
+                categoryRepository.updatePartialMangaCategories(updates)
+            }
+        }
+    }
+
+    fun moveToParent(category: Category) {
+        screenModelScope.launch {
+            if (category.parentId != null) {
+                val currentState = mutableState.value
+                if (currentState !is MangaCategoryScreenState.Success) return@launch
+
+                val siblings = currentState.categories.filter { it.parentId == category.parentId }
+                val sortedSiblings = siblings.sortedBy { it.order }
+                val index = sortedSiblings.indexOfFirst { it.id == category.id }
+                val maxOrder = sortedSiblings.filterNot { it.id == category.id }
+                    .maxOfOrNull { it.order } ?: 0
+
+                categoryRepository.updatePartialMangaCategory(
+                    CategoryUpdate(
+                        id = category.id,
+                        parentId = null,
+                        order = maxOrder + 1,
+                    ),
+                )
+            }
+        }
+    }
+
+    fun setThumbnail(categoryId: Long, thumbnailUrl: String?) {
+        screenModelScope.launch {
+            categoryRepository.updatePartialMangaCategory(
+                CategoryUpdate(
+                    id = categoryId,
+                    thumbnailUrl = thumbnailUrl,
+                ),
+            )
         }
     }
 

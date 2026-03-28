@@ -3,6 +3,9 @@ package eu.kanade.tachiyomi.ui.category.anime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.util.fastMap
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
@@ -15,16 +18,14 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import eu.kanade.presentation.category.AnimeCategoryScreen
 import eu.kanade.presentation.category.components.CategoryCreateDialog
 import eu.kanade.presentation.category.components.CategoryDeleteDialog
 import eu.kanade.presentation.category.components.CategoryRenameDialog
+import eu.kanade.presentation.category.components.ThumbnailUrlDialog
 import eu.kanade.presentation.components.TabContent
 import kotlinx.collections.immutable.toImmutableList
+import tachiyomi.domain.category.model.Category
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.screens.LoadingScreen
 
@@ -36,6 +37,7 @@ fun Screen.animeCategoryTab(): TabContent {
     val state by screenModel.state.collectAsState()
 
     var navigationStack by remember { mutableStateOf(listOf<Long?>(null)) }
+    var thumbnailDialogCategory by remember { mutableStateOf<Category?>(null) }
     val currentParentId = navigationStack.last()
 
     return TabContent(
@@ -48,12 +50,13 @@ fun Screen.animeCategoryTab(): TabContent {
                 val successState = state as AnimeCategoryScreenState.Success
                 val currentCategories = successState.categories.filter { it.parentId == currentParentId }
                 val currentState = successState.copy(categories = currentCategories.toImmutableList())
+                val allCategories = successState.categories
 
                 Column {
                     if (navigationStack.size > 1) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             IconButton(onClick = { navigationStack = navigationStack.dropLast(1) }) {
-                                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                             }
                             Text(text = "Subcategories")
                         }
@@ -66,7 +69,25 @@ fun Screen.animeCategoryTab(): TabContent {
                         onClickRename = { screenModel.showDialog(AnimeCategoryDialog.Rename(it)) },
                         onClickHide = screenModel::hideCategory,
                         onClickDelete = { screenModel.showDialog(AnimeCategoryDialog.Delete(it)) },
-                        onChangeOrder = screenModel::changeOrder,
+                        onMoveUp = screenModel::moveUp,
+                        onMoveDown = screenModel::moveDown,
+                        onMoveToParent = screenModel::moveToParent,
+                        onEditThumbnail = { thumbnailDialogCategory = it },
+                        canMoveUp = { category ->
+                            val siblings = allCategories.filter { it.parentId == category.parentId }
+                            val sortedSiblings = siblings.sortedBy { it.order }
+                            val index = sortedSiblings.indexOfFirst { it.id == category.id }
+                            index > 0
+                        },
+                        canMoveDown = { category ->
+                            val siblings = allCategories.filter { it.parentId == category.parentId }
+                            val sortedSiblings = siblings.sortedBy { it.order }
+                            val index = sortedSiblings.indexOfFirst { it.id == category.id }
+                            index >= 0 && index < sortedSiblings.size - 1
+                        },
+                        canMoveToParent = { category ->
+                            category.parentId != null
+                        },
                     )
                 }
 
@@ -94,6 +115,14 @@ fun Screen.animeCategoryTab(): TabContent {
                             category = dialog.category.name,
                         )
                     }
+                }
+
+                thumbnailDialogCategory?.let { category ->
+                    ThumbnailUrlDialog(
+                        currentUrl = category.thumbnailUrl,
+                        onDismissRequest = { thumbnailDialogCategory = null },
+                        onConfirm = { url -> screenModel.setThumbnail(category.id, url) },
+                    )
                 }
             }
         },
