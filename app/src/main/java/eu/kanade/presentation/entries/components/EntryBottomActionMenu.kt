@@ -30,6 +30,8 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Input
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.NewLabel
 import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.RemoveDone
@@ -297,6 +299,8 @@ fun LibraryBottomActionMenu(
     onMarkAsUnviewedClicked: () -> Unit,
     onDownloadClicked: ((DownloadAction) -> Unit)?,
     onDeleteClicked: () -> Unit,
+    onMoveUpClicked: (() -> Unit)? = null,
+    onMoveDownClicked: (() -> Unit)? = null,
     isManga: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -315,11 +319,11 @@ fun LibraryBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false) }
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false, false) }
             var resetJob: Job? = remember { null }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                (0..<6).forEach { i -> confirm[i] = i == toConfirmIndex }
+                (0..<8).forEach { i -> confirm[i] = i == toConfirmIndex }
                 resetJob?.cancel()
                 resetJob = scope.launch {
                     delay(1.seconds)
@@ -348,6 +352,24 @@ fun LibraryBottomActionMenu(
                         toConfirm = confirm[1],
                         onLongClick = { onLongClickItem(1) },
                         onClick = onCreateCategoryClicked,
+                    )
+                }
+                if (onMoveUpClicked != null) {
+                    Button(
+                        title = stringResource(MR.strings.action_move_category_up),
+                        icon = Icons.Outlined.KeyboardArrowUp,
+                        toConfirm = confirm[6],
+                        onLongClick = { onLongClickItem(6) },
+                        onClick = onMoveUpClicked,
+                    )
+                }
+                if (onMoveDownClicked != null) {
+                    Button(
+                        title = stringResource(MR.strings.action_move_category_down),
+                        icon = Icons.Outlined.KeyboardArrowDown,
+                        toConfirm = confirm[7],
+                        onLongClick = { onLongClickItem(7) },
+                        onClick = onMoveDownClicked,
                     )
                 }
                 val viewed = if (isManga) MR.strings.action_mark_as_read else AYMR.strings.action_mark_as_seen

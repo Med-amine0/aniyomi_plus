@@ -50,6 +50,7 @@ fun AnimeLibraryContent(
     onRefresh: (Category?) -> Boolean,
     onGlobalSearchClicked: () -> Unit,
     onCurrentCategoryChanged: (Long?) -> Unit,
+    onEnterCategory: ((Long) -> Unit)? = null,
     getNumberOfAnimeForCategory: (Category) -> Int?,
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
@@ -145,6 +146,7 @@ fun AnimeLibraryContent(
                 selection = selection,
                 onGroupClick = { clickedCategory ->
                     navigationStack = navigationStack + clickedCategory
+                    onEnterCategory?.invoke(clickedCategory.id)
                 },
                 onClickAnime = onClickAnimeInternal,
                 onLongClickAnime = onToggleRangeSelection,

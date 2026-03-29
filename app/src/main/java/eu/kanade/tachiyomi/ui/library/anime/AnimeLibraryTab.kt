@@ -176,6 +176,8 @@ data object AnimeLibraryTab : Tab {
                     onDownloadClicked = screenModel::runDownloadActionSelection
                         .takeIf { state.selection.fastAll { !it.anime.isLocal() } },
                     onDeleteClicked = screenModel::openDeleteAnimeDialog,
+                    onMoveUpClicked = { screenModel.moveSelectionUp() },
+                    onMoveDownClicked = { screenModel.moveSelectionDown() },
                     isManga = false,
                 )
             },
@@ -227,6 +229,7 @@ data object AnimeLibraryTab : Tab {
                             )
                         },
                         onCurrentCategoryChanged = { screenModel.currentCategoryId = it },
+                        onEnterCategory = { screenModel.onEnterCategory(it) },
                         getNumberOfAnimeForCategory = { state.getAnimeCountForCategory(it) },
                         getDisplayMode = { screenModel.getDisplayMode() },
                         getColumnsForOrientation = {
@@ -281,10 +284,11 @@ data object AnimeLibraryTab : Tab {
             null -> {}
         }
 
-        BackHandler(enabled = state.selectionMode || state.searchQuery != null) {
+        BackHandler(enabled = state.selectionMode || state.searchQuery != null || screenModel.isInNestedCategory) {
             when {
                 state.selectionMode -> screenModel.clearSelection()
                 state.searchQuery != null -> screenModel.search(null)
+                screenModel.isInNestedCategory -> screenModel.goBackToParent()
             }
         }
 

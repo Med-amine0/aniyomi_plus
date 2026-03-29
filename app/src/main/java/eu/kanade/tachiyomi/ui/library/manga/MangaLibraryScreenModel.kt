@@ -54,6 +54,7 @@ import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.category.manga.interactor.CreateMangaCategoryWithName
 import tachiyomi.domain.category.manga.interactor.GetVisibleMangaCategories
+import tachiyomi.domain.category.manga.interactor.ReorderMangaEntry
 import tachiyomi.domain.category.manga.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.applyFilter
@@ -91,6 +92,7 @@ class MangaLibraryScreenModel(
     private val updateManga: UpdateManga = Injekt.get(),
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val createMangaCategoryWithName: CreateMangaCategoryWithName = Injekt.get(),
+    private val reorderMangaEntry: ReorderMangaEntry = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: MangaCoverCache = Injekt.get(),
@@ -105,6 +107,25 @@ class MangaLibraryScreenModel(
     )
 
     var currentCategoryId: Long? by mutableStateOf(null)
+    var isInNestedCategory: Boolean by mutableStateOf(false)
+
+    private var parentCategoryIds: MutableList<Long?> = mutableListOf(null)
+    
+    fun onEnterCategory(categoryId: Long) {
+        parentCategoryIds.add(currentCategoryId)
+        currentCategoryId = categoryId
+        isInNestedCategory = true
+    }
+    
+    fun goBackToParent(): Boolean {
+        if (parentCategoryIds.size > 1) {
+            parentCategoryIds.removeLast()
+            currentCategoryId = parentCategoryIds.lastOrNull()
+            isInNestedCategory = parentCategoryIds.size > 1
+            return true
+        }
+        return false
+    }
 
     init {
         screenModelScope.launchIO {
@@ -581,12 +602,35 @@ class MangaLibraryScreenModel(
                 if (newCategoryId != null) {
                     val mangaList = selection.map { it.manga }
                     mangaList.forEach { manga ->
-                        val currentCats = getCategories.await(manga.id).map { it.id }
-                        setMangaCategories.await(manga.id, currentCats + newCategoryId)
+                        setMangaCategories.await(manga.id, listOf(newCategoryId))
                     }
                 }
             }
             clearSelection()
+        }
+    }
+
+    fun moveSelectionUp() {
+        val selection = state.value.selection
+        if (selection.isEmpty()) return
+        val categoryId = currentCategoryId ?: return
+        
+        screenModelScope.launchIO {
+            selection.forEach { libraryManga ->
+                reorderMangaEntry.moveUp(libraryManga.manga.id, categoryId)
+            }
+        }
+    }
+
+    fun moveSelectionDown() {
+        val selection = state.value.selection
+        if (selection.isEmpty()) return
+        val categoryId = currentCategoryId ?: return
+        
+        screenModelScope.launchIO {
+            selection.forEach { libraryManga ->
+                reorderMangaEntry.moveDown(libraryManga.manga.id, categoryId)
+            }
         }
     }
 

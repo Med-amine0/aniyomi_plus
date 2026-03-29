@@ -51,6 +51,9 @@ fun MangaLibraryContent(
     onRefresh: (Category?) -> Boolean,
     onGlobalSearchClicked: () -> Unit,
     onCurrentCategoryChanged: (Long?) -> Unit,
+    onEnterCategory: ((Long) -> Unit)? = null,
+    onMoveMangaUp: ((LibraryManga) -> Unit)? = null,
+    onMoveMangaDown: ((LibraryManga) -> Unit)? = null,
     getNumberOfMangaForCategory: (Category) -> Int?,
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
@@ -147,6 +150,7 @@ fun MangaLibraryContent(
                 selection = selection,
                 onGroupClick = { clickedCategory ->
                     navigationStack = navigationStack + clickedCategory
+                    onEnterCategory?.invoke(clickedCategory.id)
                 },
                 onClickManga = onClickMangaInternal,
                 onLongClickManga = onToggleRangeSelection,
