@@ -186,6 +186,22 @@ class MangaCategoryScreenModel(
                     thumbnailUrl = thumbnailUrl,
                 ),
             )
+            refreshCategories()
+        }
+    }
+
+    private suspend fun refreshCategories() {
+        val categories = if (libraryPreferences.hideHiddenCategoriesSettings().get()) {
+            getVisibleCategories.await()
+        } else {
+            getAllCategories.await()
+        }
+        mutableState.update {
+            MangaCategoryScreenState.Success(
+                categories = categories
+                    .filterNot(Category::isSystemCategory)
+                    .toImmutableList(),
+            )
         }
     }
 

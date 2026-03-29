@@ -602,7 +602,9 @@ class MangaLibraryScreenModel(
                 if (newCategoryId != null) {
                     val mangaList = selection.map { it.manga }
                     mangaList.forEach { manga ->
-                        setMangaCategories.await(manga.id, listOf(newCategoryId))
+                        val currentCats = getCategories.await(manga.id).map { it.id }
+                        val filteredCats = currentCats.filter { it != currentCategoryId }
+                        setMangaCategories.await(manga.id, filteredCats + newCategoryId)
                     }
                 }
             }

@@ -23,7 +23,7 @@ class SetSortModeForAnimeCategory(
         if (type == AnimeLibrarySort.Type.Random) {
             preferences.randomAnimeSortSeed().set(Random.nextInt())
         }
-        if (category != null && preferences.categorizedDisplaySettings().get()) {
+        if (category != null) {
             categoryRepository.updatePartialAnimeCategory(
                 CategoryUpdate(
                     id = category.id,

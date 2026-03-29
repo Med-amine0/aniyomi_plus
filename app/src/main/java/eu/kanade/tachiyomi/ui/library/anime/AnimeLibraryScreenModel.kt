@@ -617,7 +617,9 @@ class AnimeLibraryScreenModel(
                 if (newCategoryId != null) {
                     val animeList = selection.map { it.anime }
                     animeList.forEach { anime ->
-                        setAnimeCategories.await(anime.id, listOf(newCategoryId))
+                        val currentCats = getCategories.await(anime.id).map { it.id }
+                        val filteredCats = currentCats.filter { it != currentCategoryId }
+                        setAnimeCategories.await(anime.id, filteredCats + newCategoryId)
                     }
                 }
             }

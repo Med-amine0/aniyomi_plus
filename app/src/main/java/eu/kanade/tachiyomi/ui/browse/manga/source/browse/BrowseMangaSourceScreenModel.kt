@@ -259,21 +259,20 @@ class BrowseMangaSourceScreenModel(
             val defaultCategory = categories.find { it.id == defaultCategoryId.toLong() }
 
             when {
-                // Default category set
+                // Default category set and valid
                 defaultCategory != null -> {
                     moveMangaToCategories(manga, defaultCategory)
 
                     changeMangaFavorite(manga)
                 }
-
-                // Automatic 'Default' or no categories
-                defaultCategoryId == 0 || categories.isEmpty() -> {
+                // No categories exist - add without category
+                categories.isEmpty() -> {
                     moveMangaToCategories(manga)
 
                     changeMangaFavorite(manga)
                 }
 
-                // Choose a category
+                // Categories exist but no default - show dialog
                 else -> {
                     val preselectedIds = getCategories.await(manga.id).map { it.id }
                     setDialog(

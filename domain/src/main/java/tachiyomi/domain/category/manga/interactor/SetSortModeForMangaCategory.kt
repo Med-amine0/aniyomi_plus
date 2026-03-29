@@ -23,7 +23,7 @@ class SetSortModeForMangaCategory(
         if (type == MangaLibrarySort.Type.Random) {
             preferences.randomMangaSortSeed().set(Random.nextInt())
         }
-        if (category != null && preferences.categorizedDisplaySettings().get()) {
+        if (category != null) {
             categoryRepository.updatePartialMangaCategory(
                 CategoryUpdate(
                     id = category.id,

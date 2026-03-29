@@ -262,20 +262,20 @@ class BrowseAnimeSourceScreenModel(
             val defaultCategory = categories.find { it.id == defaultCategoryId.toLong() }
 
             when {
-                // Default category set
+                // Default category set and valid
                 defaultCategory != null -> {
                     moveAnimeToCategories(anime, defaultCategory)
 
                     changeAnimeFavorite(anime)
                 }
-                // Automatic 'Default' or no categories
-                defaultCategoryId == 0 || categories.isEmpty() -> {
+                // No categories exist - add without category
+                categories.isEmpty() -> {
                     moveAnimeToCategories(anime)
 
                     changeAnimeFavorite(anime)
                 }
 
-                // Choose a category
+                // Categories exist but no default - show dialog
                 else -> {
                     val preselectedIds = getCategories.await(anime.id).map { it.id }
                     setDialog(

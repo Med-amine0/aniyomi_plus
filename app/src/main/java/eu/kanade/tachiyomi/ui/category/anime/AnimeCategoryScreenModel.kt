@@ -185,6 +185,22 @@ class AnimeCategoryScreenModel(
                     thumbnailUrl = thumbnailUrl,
                 ),
             )
+            refreshCategories()
+        }
+    }
+
+    private suspend fun refreshCategories() {
+        val categories = if (libraryPreferences.hideHiddenCategoriesSettings().get()) {
+            getVisibleCategories.await()
+        } else {
+            getAllCategories.await()
+        }
+        mutableState.update {
+            AnimeCategoryScreenState.Success(
+                categories = categories
+                    .filterNot(Category::isSystemCategory)
+                    .toImmutableList(),
+            )
         }
     }
 
