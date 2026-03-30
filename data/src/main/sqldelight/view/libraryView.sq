@@ -7,7 +7,8 @@ SELECT
     coalesce(C.fetchedAt, 0) AS chapterFetchedAt,
     coalesce(C.lastRead, 0) AS lastRead,
     coalesce(C.bookmarkCount, 0) AS bookmarkCount,
-    coalesce(MC.category_id, 0) AS category
+    MC.category_id AS category,
+    MC.sort_order AS sortOrder
 FROM mangas M
 LEFT JOIN(
     SELECT

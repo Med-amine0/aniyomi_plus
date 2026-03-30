@@ -29,7 +29,8 @@ SELECT
         WHEN 1 THEN coalesce(ES.fillermarkCount, 0)
         WHEN 0 THEN coalesce(ASS.total_fillermarks, 0)
     END AS fillermarkCount,
-    coalesce(MC.category_id, 0) AS category
+    coalesce(MC.category_id, 0) AS category,
+    MC.sort_order AS sortOrder
 FROM animes M
 LEFT JOIN episodestatsView AS ES ON M._id = ES.anime_id
 LEFT JOIN animehistorystatsView AS AHS ON M._id = AHS.anime_id

@@ -37,6 +37,7 @@ import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -113,6 +114,7 @@ class AnimeLibraryScreenModel(
     var isInNestedCategory: Boolean by mutableStateOf(false)
 
     private var parentCategoryIds: MutableList<Long?> = mutableListOf(null)
+    private val refreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     
     fun onEnterCategory(categoryId: Long) {
         parentCategoryIds.add(currentCategoryId)
@@ -128,6 +130,10 @@ class AnimeLibraryScreenModel(
             return true
         }
         return false
+    }
+    
+    private fun triggerRefresh() {
+        refreshTrigger.tryEmit(Unit)
     }
 
     init {
@@ -348,16 +354,22 @@ class AnimeLibraryScreenModel(
                 AnimeLibrarySort.Type.Random -> {
                     error("Why Are We Still Here? Just To Suffer?")
                 }
+                AnimeLibrarySort.Type.Custom -> {
+                    i1.libraryAnime.sortOrder.compareTo(i2.libraryAnime.sortOrder)
+                }
             }
         }
 
-        return mapValues { (key, value) ->
-            if (key.sort.type == AnimeLibrarySort.Type.Random) {
+        val currentCategory = currentCategoryId?.let { catId -> this.keys.find { it.id == catId } }
+        val sortToUse = currentCategory?.sort ?: return this
+
+        return mapValues { (_, value) ->
+            if (sortToUse.type == AnimeLibrarySort.Type.Random) {
                 return@mapValues value.shuffled(Random(libraryPreferences.randomAnimeSortSeed().get()))
             }
 
-            val comparator = key.sort.comparator()
-                .let { if (key.sort.isAscending) it else it.reversed() }
+            val comparator = sortToUse.comparator()
+                .let { if (sortToUse.isAscending) it else it.reversed() }
                 .thenComparator(sortAlphabetically)
 
             value.sortedWith(comparator)
@@ -624,6 +636,7 @@ class AnimeLibraryScreenModel(
                 }
             }
             clearSelection()
+            triggerRefresh()
         }
     }
 

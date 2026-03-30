@@ -17,8 +17,18 @@ BEGIN
 END;
 
 insert:
-INSERT INTO animes_categories(anime_id, category_id)
-VALUES (:animeId, :categoryId);
+INSERT INTO animes_categories(anime_id, category_id, sort_order)
+VALUES (:animeId, :categoryId, (
+    SELECT COALESCE(MAX(sort_order), -1) + 1 
+    FROM animes_categories 
+    WHERE category_id = :categoryId
+));
+
+getMaxSortOrder:
+SELECT COALESCE(MAX(sort_order), -1) FROM animes_categories WHERE category_id = :categoryId;
+
+getEntriesInCategory:
+SELECT anime_id, sort_order FROM animes_categories WHERE category_id = :categoryId ORDER BY sort_order;
 
 deleteAnimeCategoryByAnimeId:
 DELETE FROM animes_categories

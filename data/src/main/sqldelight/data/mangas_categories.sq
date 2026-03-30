@@ -17,8 +17,18 @@ BEGIN
 END;
 
 insert:
-INSERT INTO mangas_categories(manga_id, category_id)
-VALUES (:mangaId, :categoryId);
+INSERT INTO mangas_categories(manga_id, category_id, sort_order)
+VALUES (:mangaId, :categoryId, (
+    SELECT COALESCE(MAX(sort_order), -1) + 1 
+    FROM mangas_categories 
+    WHERE category_id = :categoryId
+));
+
+getMaxSortOrder:
+SELECT COALESCE(MAX(sort_order), -1) FROM mangas_categories WHERE category_id = :categoryId;
+
+getEntriesInCategory:
+SELECT manga_id, sort_order FROM mangas_categories WHERE category_id = :categoryId ORDER BY sort_order;
 
 deleteMangaCategoryByMangaId:
 DELETE FROM mangas_categories
@@ -28,3 +38,6 @@ updateSortOrder:
 UPDATE mangas_categories
 SET sort_order = :sortOrder
 WHERE manga_id = :mangaId AND category_id = :categoryId;
+
+updateSortOrders:
+UPDATE mangas_categories SET sort_order = :sortOrder WHERE manga_id = :mangaId AND category_id = :categoryId;

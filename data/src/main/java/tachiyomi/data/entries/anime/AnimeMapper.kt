@@ -113,7 +113,8 @@ object AnimeMapper {
         lastSeen: Long,
         bookmarkCount: Double,
         fillermarkCount: Double,
-        category: Long,
+        category: Long?,
+        sortOrder: Long?,
     ): LibraryAnime = LibraryAnime(
         anime = mapAnime(
             id,
@@ -148,7 +149,7 @@ object AnimeMapper {
             backgroundUrl,
             backgroundLastModified,
         ),
-        category = category,
+        category = category ?: 0L,
         totalCount = totalCount,
         seenCount = seenCount.toLong(),
         bookmarkCount = bookmarkCount.toLong(),
@@ -156,6 +157,7 @@ object AnimeMapper {
         latestUpload = latestUpload,
         episodeFetchedAt = episodeFetchedAt,
         lastSeen = lastSeen,
+        sortOrder = sortOrder ?: 0L,
     )
 
     fun mapSeasonAnime(

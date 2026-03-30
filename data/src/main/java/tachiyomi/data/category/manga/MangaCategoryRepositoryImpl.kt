@@ -123,6 +123,17 @@ class MangaCategoryRepositoryImpl(
         return handler.subscribeToList { categoriesQueries.getRootCategories(::mapCategory) }
     }
 
+    override suspend fun getEntriesInCategory(categoryId: Long): List<Pair<Long, Long>> {
+        return handler.awaitList { mangas_categoriesQueries.getEntriesInCategory(categoryId) }
+            .map { (mangaId, sortOrder) -> Pair(mangaId, sortOrder) }
+    }
+
+    override suspend fun updateSortOrder(mangaId: Long, categoryId: Long, sortOrder: Long) {
+        handler.await {
+            mangas_categoriesQueries.updateSortOrder(mangaId, categoryId, sortOrder)
+        }
+    }
+
     private fun mapCategory(
         id: Long,
         name: String,
