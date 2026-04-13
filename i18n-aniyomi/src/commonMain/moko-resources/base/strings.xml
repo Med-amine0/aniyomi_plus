@@ -380,7 +380,12 @@
     <string name="label_manga_library">Manga</string>
     <string name="label_anime_library">Anime</string>
     <string name="label_anime">Anime</string>
+    <string name="label_dach">Dach</string>
     <string name="label_manga">Manga</string>
+    <string name="recently_viewed">Recently Viewed</string>
+    <string name="in_progress">In Progress</string>
+    <string name="show_all_library">Show All Library</string>
+    <string name="collapse_library">Collapse Library</string>
     <string name="label_recent_anime_updates">Anime Updates</string>
     <string name="label_manga_sources">Manga Sources</string>
     <string name="label_anime_sources">Anime Sources</string>
