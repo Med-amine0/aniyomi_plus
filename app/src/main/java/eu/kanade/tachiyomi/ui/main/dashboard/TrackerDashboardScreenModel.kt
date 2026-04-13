@@ -38,12 +38,12 @@ data class TrackerDashboardState(
 
     val inProgressAnime: List<LibraryAnime>
         get() = allAnime
-            .filter { it.unseenCount > 0 }
+            .filter { it.unseenCount > 0L }
             .sortedByDescending { getProgressPercent(it) }
 
     val inProgressManga: List<LibraryManga>
         get() = allManga
-            .filter { it.unreadCount > 0 }
+            .filter { it.unreadCount > 0L }
             .sortedByDescending { getProgressPercent(it) }
 
     val completedAnime: List<LibraryAnime>

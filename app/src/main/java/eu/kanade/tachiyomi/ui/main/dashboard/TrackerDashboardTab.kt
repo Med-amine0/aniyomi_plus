@@ -398,7 +398,10 @@ private fun RecentCard(
                     .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.85f),
+                            ),
                         ),
                     ),
                 contentAlignment = Alignment.Center,
@@ -444,7 +447,10 @@ private fun RecentMangaCard(
                     .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.85f),
+                            ),
                         ),
                     ),
                 contentAlignment = Alignment.Center,
@@ -472,17 +478,16 @@ private fun InProgressSection(
     onItemClick: (Long) -> Unit,
     onShowAllClick: () -> Unit,
 ) {
-    val visibleItems = if (showAllExpanded) items else items.take(2)
     val hasMore = items.size > 2
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         items.forEachIndexed { index, item ->
             if (!showAllExpanded && index >= 2) return@forEachIndexed
-            
+
             if (index > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            
+
             val anime = item.anime
             InProgressCard(
                 coverData = AnimeCover(
@@ -519,17 +524,16 @@ private fun InProgressMangaSection(
     onItemClick: (Long) -> Unit,
     onShowAllClick: () -> Unit,
 ) {
-    val visibleItems = if (showAllExpanded) items else items.take(2)
     val hasMore = items.size > 2
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         items.forEachIndexed { index, item ->
             if (!showAllExpanded && index >= 2) return@forEachIndexed
-            
+
             if (index > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            
+
             val manga = item.manga
             InProgressMangaCard(
                 coverData = MangaCover(
@@ -587,11 +591,11 @@ private fun InProgressCard(
                 contentScale = ContentScale.Crop,
             )
         }
-        
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxWidth(),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Spacer(modifier = Modifier.height(4.dp))
@@ -655,11 +659,11 @@ private fun InProgressMangaCard(
                 contentScale = ContentScale.Crop,
             )
         }
-        
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxWidth(),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Spacer(modifier = Modifier.height(4.dp))
