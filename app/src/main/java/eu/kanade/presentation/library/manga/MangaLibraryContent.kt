@@ -119,10 +119,10 @@ fun MangaLibraryContent(
             groups + entryItems
         }
 
-        val columns by remember { getColumnsForOrientation(true) } // Simplified assuming compact grid
-        val entryColumns by remember { getEntryColumnsForOrientation?.invoke(true) }
+        val columns = getColumnsForOrientation(true)
+        val entryColumns = getEntryColumnsForOrientation?.invoke(true)
 
-        val effectiveColumns = entryColumns?.get()?.takeIf { it > 0 } ?: columns.takeIf { it > 0 } ?: 2
+        val effectiveColumns = entryColumns?.value?.takeIf { it > 0 } ?: columns.value.takeIf { it > 0 } ?: 2
 
         PullRefresh(
             refreshing = isRefreshing,
