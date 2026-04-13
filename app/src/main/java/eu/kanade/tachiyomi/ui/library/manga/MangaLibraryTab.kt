@@ -17,6 +17,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +35,7 @@ import eu.kanade.domain.ui.model.NavStyle
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.entries.components.LibraryBottomActionMenu
 import eu.kanade.presentation.library.DeleteLibraryEntryDialog
+import eu.kanade.presentation.library.components.ColumnsBottomSheet
 import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.library.manga.MangaLibraryContent
 import eu.kanade.presentation.library.manga.MangaLibrarySettingsDialog
@@ -100,6 +103,8 @@ data object MangaLibraryTab : Tab {
         val state by screenModel.state.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
+        var showColumnsSheet by remember { mutableStateOf(false) }
+        val entryColumns by screenModel.getEntryColumnsPreferenceForCurrentOrientation(true).collectAsState()
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = MangaLibraryUpdateJob.startNow(context, category)
@@ -146,6 +151,7 @@ data object MangaLibraryTab : Tab {
                         )
                     },
                     onClickFilter = screenModel::showSettingsDialog,
+                    onClickColumns = { showColumnsSheet = true },
                     onClickRefresh = {
                         onClickRefresh(
                             state.categories[screenModel.activeCategoryIndex],
@@ -248,6 +254,9 @@ data object MangaLibraryTab : Tab {
                                 it,
                             )
                         },
+                        getEntryColumnsForOrientation = {
+                            screenModel::getEntryColumnsPreferenceForCurrentOrientation
+                        },
                     ) { state.getLibraryItemsByPage(it) }
                 }
             }
@@ -294,6 +303,16 @@ data object MangaLibraryTab : Tab {
                 )
             }
             null -> {}
+        }
+
+        if (showColumnsSheet) {
+            ColumnsBottomSheet(
+                currentColumns = entryColumns,
+                onColumnsChange = { newColumns ->
+                    screenModel.getEntryColumnsPreferenceForCurrentOrientation(true).set(newColumns)
+                },
+                onDismiss = { showColumnsSheet = false },
+            )
         }
 
         BackHandler(enabled = state.selectionMode || state.searchQuery != null) {

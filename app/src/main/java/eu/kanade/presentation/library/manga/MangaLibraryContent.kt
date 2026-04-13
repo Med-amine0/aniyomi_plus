@@ -49,6 +49,7 @@ fun MangaLibraryContent(
     getNumberOfMangaForCategory: (Category) -> Int?,
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
+    getEntryColumnsForOrientation: ((Boolean) -> PreferenceMutableState<Int>)? = null,
     getLibraryForPage: (Int) -> List<MangaLibraryItem>,
 ) {
     Column(
@@ -119,6 +120,9 @@ fun MangaLibraryContent(
         }
 
         val columns by remember { getColumnsForOrientation(true) } // Simplified assuming compact grid
+        val entryColumns by remember { getEntryColumnsForOrientation?.invoke(true) }
+
+        val effectiveColumns = entryColumns?.get()?.takeIf { it > 0 } ?: columns.takeIf { it > 0 } ?: 2
 
         PullRefresh(
             refreshing = isRefreshing,
@@ -135,7 +139,7 @@ fun MangaLibraryContent(
         ) {
             MangaCategoryGridScreen(
                 items = gridItems,
-                columns = columns.takeIf { it > 0 } ?: 2,
+                columns = effectiveColumns,
                 contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
                 selection = selection,
                 onGroupClick = { clickedCategory ->

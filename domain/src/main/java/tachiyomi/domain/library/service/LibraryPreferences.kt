@@ -105,6 +105,12 @@ class LibraryPreferences(
     fun animeLandscapeColumns() = preferenceStore.getInt("pref_animelib_columns_landscape_key", 0)
     fun mangaLandscapeColumns() = preferenceStore.getInt("pref_library_columns_landscape_key", 0)
 
+    // Entry Columns (for entries within categories)
+    fun animeEntryPortraitColumns() = preferenceStore.getInt("pref_anime_entry_columns_portrait_key", 0)
+    fun animeEntryLandscapeColumns() = preferenceStore.getInt("pref_anime_entry_columns_landscape_key", 0)
+    fun mangaEntryPortraitColumns() = preferenceStore.getInt("pref_manga_entry_columns_portrait_key", 0)
+    fun mangaEntryLandscapeColumns() = preferenceStore.getInt("pref_manga_entry_columns_landscape_key", 0)
+
     // Mixture Filter
 
     fun filterDownloadedAnime() =

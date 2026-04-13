@@ -592,6 +592,18 @@ class AnimeLibraryScreenModel(
         )
     }
 
+    fun getEntryColumnsPreferenceForCurrentOrientation(isLandscape: Boolean): PreferenceMutableState<Int> {
+        return (
+            if (isLandscape) {
+                libraryPreferences.animeEntryLandscapeColumns()
+            } else {
+                libraryPreferences.animeEntryPortraitColumns()
+            }
+            ).asState(
+            screenModelScope,
+        )
+    }
+
     suspend fun getRandomAnimelibItemForCurrentCategory(): AnimeLibraryItem? {
         if (state.value.categories.isEmpty()) return null
 

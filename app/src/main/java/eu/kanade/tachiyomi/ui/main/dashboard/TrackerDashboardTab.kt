@@ -8,23 +8,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -72,7 +72,7 @@ data object TrackerDashboardTab : Tab {
         get() = TabOptions(
             index = 0u,
             title = stringResource(AYMR.strings.label_dach),
-            icon = painterResource(R.drawable.ic_ani_monochrome_launcher),
+            icon = painterResource(R.drawable.ic_dach_24dp),
         )
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -87,7 +87,8 @@ data object TrackerDashboardTab : Tab {
             onRefresh = { screenModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundColor),
+                .background(BackgroundColor)
+                .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             when {
                 state.isLoading -> LoadingScreen()
@@ -117,7 +118,7 @@ private fun DashboardContent(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundColor),
-        contentPadding = PaddingValues(bottom = 80.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, bottom = 80.dp),
     ) {
         item {
             DachToggle(
@@ -150,14 +151,9 @@ private fun DashboardContent(
 
             item {
                 if (state.inProgressAnime.isNotEmpty()) {
-                    InProgressSection(
-                        items = state.inProgressAnime,
-                        showAllExpanded = state.showAllExpanded,
-                        getProgressPercent = state::getProgressPercent,
-                        getProgressText = state::getProgressText,
-                        accentColor = AnimeAccent,
+                    InProgressRow(
+                        items = state.inProgressAnime.take(5),
                         onItemClick = onAnimeClick,
-                        onShowAllClick = onShowAllToggle,
                     )
                 } else {
                     EmptySection()
@@ -201,14 +197,9 @@ private fun DashboardContent(
 
             item {
                 if (state.inProgressManga.isNotEmpty()) {
-                    InProgressMangaSection(
-                        items = state.inProgressManga,
-                        showAllExpanded = state.showAllExpanded,
-                        getProgressPercent = state::getProgressPercent,
-                        getProgressText = state::getProgressText,
-                        accentColor = MangaAccent,
+                    InProgressMangaRow(
+                        items = state.inProgressManga.take(5),
                         onItemClick = onMangaClick,
-                        onShowAllClick = onShowAllToggle,
                     )
                 } else {
                     EmptySection()
@@ -297,7 +288,7 @@ private fun SectionTitle(text: String) {
         color = Color(0xFF888888),
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.5.sp,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(vertical = 8.dp),
     )
 }
 
@@ -469,27 +460,16 @@ private fun RecentMangaCard(
 }
 
 @Composable
-private fun InProgressSection(
+private fun InProgressRow(
     items: List<LibraryAnime>,
-    showAllExpanded: Boolean,
-    getProgressPercent: (LibraryAnime) -> Float,
-    getProgressText: (LibraryAnime) -> String,
-    accentColor: Color,
     onItemClick: (Long) -> Unit,
-    onShowAllClick: () -> Unit,
 ) {
-    val hasMore = items.size > 2
-
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        items.forEachIndexed { index, item ->
-            if (!showAllExpanded && index >= 2) return@forEachIndexed
-
-            if (index > 0) {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(items, key = { it.id }) { item ->
             val anime = item.anime
-            InProgressCard(
+            InProgressThumbnail(
                 coverData = AnimeCover(
                     animeId = anime.id,
                     sourceId = anime.source,
@@ -497,45 +477,26 @@ private fun InProgressSection(
                     url = anime.thumbnailUrl,
                     lastModified = anime.coverLastModified,
                 ),
-                progress = getProgressPercent(item),
-                progressText = getProgressText(item),
-                accentColor = accentColor,
+                progress = if (anime.totalEpisodes > 0) {
+                    anime.watchedEpisodes.toFloat() / anime.totalEpisodes.toFloat()
+                } else 0f,
                 onClick = { onItemClick(item.id) },
-            )
-        }
-
-        if (hasMore) {
-            Spacer(modifier = Modifier.height(12.dp))
-            ShowAllButton(
-                expanded = showAllExpanded,
-                onClick = onShowAllClick,
             )
         }
     }
 }
 
 @Composable
-private fun InProgressMangaSection(
+private fun InProgressMangaRow(
     items: List<LibraryManga>,
-    showAllExpanded: Boolean,
-    getProgressPercent: (LibraryManga) -> Float,
-    getProgressText: (LibraryManga) -> String,
-    accentColor: Color,
     onItemClick: (Long) -> Unit,
-    onShowAllClick: () -> Unit,
 ) {
-    val hasMore = items.size > 2
-
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        items.forEachIndexed { index, item ->
-            if (!showAllExpanded && index >= 2) return@forEachIndexed
-
-            if (index > 0) {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(items, key = { it.id }) { item ->
             val manga = item.manga
-            InProgressMangaCard(
+            InProgressMangaThumbnail(
                 coverData = MangaCover(
                     mangaId = manga.id,
                     sourceId = manga.source,
@@ -543,85 +504,48 @@ private fun InProgressMangaSection(
                     url = manga.thumbnailUrl,
                     lastModified = manga.coverLastModified,
                 ),
-                progress = getProgressPercent(item),
-                progressText = getProgressText(item),
-                accentColor = accentColor,
+                progress = if (manga.totalChapters > 0) {
+                    manga.readChapters.toFloat() / manga.totalChapters.toFloat()
+                } else 0f,
                 onClick = { onItemClick(item.id) },
             )
         }
-
-        if (hasMore) {
-            Spacer(modifier = Modifier.height(12.dp))
-            ShowAllButton(
-                expanded = showAllExpanded,
-                onClick = onShowAllClick,
-            )
-        }
     }
 }
 
 @Composable
-private fun InProgressCard(
+private fun InProgressThumbnail(
     coverData: AnimeCover,
     progress: Float,
-    progressText: String,
-    accentColor: Color,
     onClick: () -> Unit,
 ) {
-    Row(
+    Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceColor)
-            .clickable(onClick = onClick)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .width(80.dp)
+            .aspectRatio(2f / 3f),
+        shape = RoundedCornerShape(6.dp),
+        onClick = onClick,
     ) {
-        Box(
-            modifier = Modifier
-                .width(65.dp)
-                .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(4.dp)),
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
                 model = coverData,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = { progress },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-                color = accentColor,
-                trackColor = Color(0xFF333333),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .align(Alignment.BottomCenter)
+                    .height(20.dp)
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = progressText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF888888),
                 )
             }
         }
@@ -629,95 +553,41 @@ private fun InProgressCard(
 }
 
 @Composable
-private fun InProgressMangaCard(
+private fun InProgressMangaThumbnail(
     coverData: MangaCover,
     progress: Float,
-    progressText: String,
-    accentColor: Color,
     onClick: () -> Unit,
 ) {
-    Row(
+    Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceColor)
-            .clickable(onClick = onClick)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .width(80.dp)
+            .aspectRatio(2f / 3f),
+        shape = RoundedCornerShape(6.dp),
+        onClick = onClick,
     ) {
-        Box(
-            modifier = Modifier
-                .width(65.dp)
-                .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(4.dp)),
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
                 model = coverData,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = { progress },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-                color = accentColor,
-                trackColor = Color(0xFF333333),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .align(Alignment.BottomCenter)
+                    .height(20.dp)
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = progressText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF888888),
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ShowAllButton(
-    expanded: Boolean,
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = SurfaceColor,
-            contentColor = Color(0xFF888888),
-        ),
-        shape = RoundedCornerShape(8.dp),
-    ) {
-        Text(
-            text = if (expanded) {
-                stringResource(AYMR.strings.collapse_library)
-            } else {
-                stringResource(AYMR.strings.show_all_library)
-            },
-            fontWeight = FontWeight.Bold,
-        )
     }
 }
 
@@ -727,9 +597,7 @@ private fun CompletedSection(
     onItemClick: (Long) -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
     ) {
@@ -758,9 +626,7 @@ private fun CompletedMangaSection(
     onItemClick: (Long) -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceColor),
     ) {
