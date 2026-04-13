@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -477,8 +479,8 @@ private fun InProgressRow(
                     url = anime.thumbnailUrl,
                     lastModified = anime.coverLastModified,
                 ),
-                progress = if (anime.totalEpisodes > 0) {
-                    anime.watchedEpisodes.toFloat() / anime.totalEpisodes.toFloat()
+                progress = if (item.totalCount > 0) {
+                    item.seenCount.toFloat() / item.totalCount.toFloat()
                 } else {
                     0f
                 },
@@ -506,8 +508,8 @@ private fun InProgressMangaRow(
                     url = manga.thumbnailUrl,
                     lastModified = manga.coverLastModified,
                 ),
-                progress = if (manga.totalChapters > 0) {
-                    manga.readChapters.toFloat() / manga.totalChapters.toFloat()
+                progress = if (item.totalChapters > 0) {
+                    item.readCount.toFloat() / item.totalChapters.toFloat()
                 } else {
                     0f
                 },
