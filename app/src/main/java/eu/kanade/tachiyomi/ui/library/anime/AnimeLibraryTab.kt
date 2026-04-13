@@ -105,7 +105,7 @@ data object AnimeLibraryTab : Tab {
 
         val snackbarHostState = remember { SnackbarHostState() }
         var showColumnsSheet by remember { mutableStateOf(false) }
-        val entryColumns by screenModel.getEntryColumnsPreferenceForCurrentOrientation(true).collectAsState()
+        val entryColumnsPref = screenModel.getEntryColumnsPreferenceForCurrentOrientation(true)
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = AnimeLibraryUpdateJob.startNow(context, category)
@@ -286,9 +286,9 @@ data object AnimeLibraryTab : Tab {
 
         if (showColumnsSheet) {
             ColumnsBottomSheet(
-                currentColumns = entryColumns,
+                currentColumns = entryColumnsPref.value,
                 onColumnsChange = { newColumns ->
-                    screenModel.getEntryColumnsPreferenceForCurrentOrientation(true).set(newColumns)
+                    entryColumnsPref.value = newColumns
                 },
                 onDismiss = { showColumnsSheet = false },
             )
