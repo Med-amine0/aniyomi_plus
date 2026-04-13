@@ -479,7 +479,9 @@ private fun InProgressRow(
                 ),
                 progress = if (anime.totalEpisodes > 0) {
                     anime.watchedEpisodes.toFloat() / anime.totalEpisodes.toFloat()
-                } else 0f,
+                } else {
+                    0f
+                },
                 onClick = { onItemClick(item.id) },
             )
         }
@@ -506,7 +508,9 @@ private fun InProgressMangaRow(
                 ),
                 progress = if (manga.totalChapters > 0) {
                     manga.readChapters.toFloat() / manga.totalChapters.toFloat()
-                } else 0f,
+                } else {
+                    0f
+                },
                 onClick = { onItemClick(item.id) },
             )
         }
