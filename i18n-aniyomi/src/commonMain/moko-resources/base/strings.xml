@@ -380,7 +380,16 @@
     <string name="label_manga_library">Manga</string>
     <string name="label_anime_library">Anime</string>
     <string name="label_anime">Anime</string>
+    <string name="label_dach">Dach</string>
     <string name="label_manga">Manga</string>
+    <string name="recently_viewed">Recently Viewed</string>
+    <string name="in_progress">In Progress</string>
+    <string name="discover">Discover</string>
+    <string name="trending">Trending</string>
+    <string name="no_anime_found">No anime found</string>
+    <string name="failed_to_load_anime">Failed to load anime</string>
+    <string name="show_all_library">Show All Library</string>
+    <string name="collapse_library">Collapse Library</string>
     <string name="label_recent_anime_updates">Anime Updates</string>
     <string name="label_manga_sources">Manga Sources</string>
     <string name="label_anime_sources">Anime Sources</string>
@@ -389,6 +398,7 @@
     <string name="pref_start_screen">Start Screen</string>
     <string name="pref_library_manga_columns">Manga items per row</string>
     <string name="pref_library_anime_columns">Anime items per row</string>
+    <string name="pref_entry_columns">Items per row</string>
     <string name="pref_bottom_nav_no_history">Move History to the More tab</string>
     <string name="pref_bottom_nav_no_updates">Move Updates to the More tab</string>
     <string name="pref_bottom_nav_no_manga">Move Manga to the More tab</string>

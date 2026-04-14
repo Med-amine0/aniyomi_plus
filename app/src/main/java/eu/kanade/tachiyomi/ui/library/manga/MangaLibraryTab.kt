@@ -36,6 +36,7 @@ import eu.kanade.presentation.entries.components.LibraryBottomActionMenu
 import eu.kanade.presentation.library.DeleteLibraryEntryDialog
 import eu.kanade.presentation.library.components.ColumnsBottomSheet
 import eu.kanade.presentation.library.components.LibraryToolbar
+import eu.kanade.presentation.library.components.ColumnsBottomSheet
 import eu.kanade.presentation.library.manga.MangaLibraryContent
 import eu.kanade.presentation.library.manga.MangaLibrarySettingsDialog
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL

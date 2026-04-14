@@ -577,6 +577,18 @@ class MangaLibraryScreenModel(
         )
     }
 
+    fun getEntryColumnsPreferenceForCurrentOrientation(isLandscape: Boolean): PreferenceMutableState<Int> {
+        return (
+            if (isLandscape) {
+                libraryPreferences.mangaEntryLandscapeColumns()
+            } else {
+                libraryPreferences.mangaEntryPortraitColumns()
+            }
+            ).asState(
+            screenModelScope,
+        )
+    }
+
     suspend fun getRandomLibraryItemForCurrentCategory(): MangaLibraryItem? {
         if (state.value.categories.isEmpty()) return null
 

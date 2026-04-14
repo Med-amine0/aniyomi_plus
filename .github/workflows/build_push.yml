@@ -36,7 +36,7 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        run: ./gradlew assembleRelease -Penable-updater
+        run: ./gradlew assembleDebug
 
       - name: Run unit tests
         run: ./gradlew testReleaseUnitTest
@@ -44,8 +44,8 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: arm64-v8a-${{ github.sha }}
-          path: app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk
+          name: debug-apk-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload mapping
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

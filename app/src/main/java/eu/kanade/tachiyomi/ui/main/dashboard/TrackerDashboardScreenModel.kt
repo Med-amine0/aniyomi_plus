@@ -17,6 +17,7 @@ import tachiyomi.domain.library.anime.LibraryAnime
 import tachiyomi.domain.library.manga.LibraryManga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.net.URLEncoder
 
 @Immutable
 data class Genre(val id: Int, val name: String)
@@ -247,13 +248,14 @@ class TrackerDashboardScreenModel : ScreenModel {
                     val images = animeObj.getJSONObject("images")
                     val jpg = images.getJSONObject("jpg")
                     val title = animeObj.getString("title")
+                    val encodedTitle = URLEncoder.encode(title, "UTF-8")
 
                     animeList.add(
                         DiscoveredAnime(
                             malId = animeObj.getLong("mal_id"),
                             title = title,
                             imageUrl = jpg.getString("image_url"),
-                            siteUrl = "https://anilist.co/search/anime?search=$title",
+                            siteUrl = "https://anilist.co/search/anime?search=$encodedTitle",
                         ),
                     )
                 }
