@@ -1,3 +1,1 @@
-plugins {
-    `kotlin-dsl`
-}
+// Spotless removed - using good code practices
