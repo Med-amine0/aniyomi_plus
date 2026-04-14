@@ -60,7 +60,6 @@ import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.source.local.entries.manga.isLocal
 import uy.kohesive.injekt.injectLazy
-import eu.kanade.tachiyomi.ui.main.MainActivity
 
 data object MangaLibraryTab : Tab {
 
