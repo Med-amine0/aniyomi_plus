@@ -384,6 +384,10 @@
     <string name="label_manga">Manga</string>
     <string name="recently_viewed">Recently Viewed</string>
     <string name="in_progress">In Progress</string>
+    <string name="discover">Discover</string>
+    <string name="trending">Trending</string>
+    <string name="no_anime_found">No anime found</string>
+    <string name="failed_to_load_anime">Failed to load anime</string>
     <string name="show_all_library">Show All Library</string>
     <string name="collapse_library">Collapse Library</string>
     <string name="label_recent_anime_updates">Anime Updates</string>

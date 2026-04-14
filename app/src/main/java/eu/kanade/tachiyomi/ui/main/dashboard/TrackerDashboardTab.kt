@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.main.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,18 +16,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -39,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +63,8 @@ import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.webview.WebViewScreen
+import eu.kanade.tachiyomi.util.system.openInBrowser
 import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.entries.manga.model.MangaCover
 import tachiyomi.domain.library.anime.LibraryAnime
@@ -61,11 +73,22 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import java.net.URLEncoder
 
 private val AnimeAccent = Color(0xFF3B82F6)
 private val MangaAccent = Color(0xFFF97316)
 private val BackgroundColor = Color(0xFF1A1A1A)
 private val SurfaceColor = Color(0xFF121212)
+
+private data class GenrePill(val id: Int, val name: String)
+
+private val defaultGenres = listOf(
+    GenrePill(0, "Trending"),
+    GenrePill(2, "Adventure"),
+    GenrePill(9, "Ecchi"),
+    GenrePill(4, "Comedy"),
+    GenrePill(1, "Action"),
+)
 
 data object TrackerDashboardTab : Tab {
 
@@ -83,6 +106,7 @@ data object TrackerDashboardTab : Tab {
         val screenModel = rememberScreenModel { TrackerDashboardScreenModel() }
         val state by screenModel.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -101,6 +125,16 @@ data object TrackerDashboardTab : Tab {
                         onShowAllToggle = { screenModel.toggleShowAll() },
                         onAnimeClick = { navigator.push(AnimeScreen(it)) },
                         onMangaClick = { navigator.push(MangaScreen(it)) },
+                        onGenreSelect = { screenModel.selectGenre(it) },
+                        onAnimeThumbnailClick = { anime ->
+                            navigator.push(WebViewScreen(anime.siteUrl, anime.title))
+                        },
+                        onAnimeSearchClick = { anime ->
+                            val searchUrl = "https://anilist.co/search/anime?search=${URLEncoder.encode(anime.title, "UTF-8")}"
+                            context.openInBrowser(searchUrl)
+                        },
+                        onLoadMore = { screenModel.loadMore() },
+                        allGenres = state.genres,
                     )
                 }
             }
@@ -115,6 +149,11 @@ private fun DashboardContent(
     onShowAllToggle: () -> Unit,
     onAnimeClick: (Long) -> Unit,
     onMangaClick: (Long) -> Unit,
+    onGenreSelect: (Int) -> Unit,
+    onAnimeThumbnailClick: (DiscoveredAnime) -> Unit,
+    onAnimeSearchClick: (DiscoveredAnime) -> Unit,
+    onLoadMore: () -> Unit,
+    allGenres: List<Genre>,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -147,7 +186,34 @@ private fun DashboardContent(
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+                SectionTitle(stringResource(AYMR.strings.discover))
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                GenrePillsRow(
+                    selectedGenreId = state.selectedGenreId,
+                    onGenreSelect = onGenreSelect,
+                    allGenres = allGenres,
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                DiscoverAnimeRow(
+                    items = state.discoveredAnime,
+                    isLoading = state.isLoadingMore,
+                    error = state.discoverError,
+                    onThumbnailClick = onAnimeThumbnailClick,
+                    onSearchClick = onAnimeSearchClick,
+                    onLoadMore = onLoadMore,
+                    hasMore = state.hasMorePages,
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(20.dp))
                 SectionTitle(stringResource(AYMR.strings.in_progress))
             }
 
@@ -163,7 +229,7 @@ private fun DashboardContent(
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 SectionTitle(stringResource(MR.strings.completed))
             }
 
@@ -193,7 +259,7 @@ private fun DashboardContent(
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 SectionTitle(stringResource(AYMR.strings.in_progress))
             }
 
@@ -209,7 +275,7 @@ private fun DashboardContent(
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 SectionTitle(stringResource(MR.strings.completed))
             }
 
@@ -235,7 +301,7 @@ private fun DachToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 0.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ToggleButton(
@@ -310,14 +376,228 @@ private fun EmptySection() {
 }
 
 @Composable
+private fun GenrePillsRow(
+    selectedGenreId: Int,
+    onGenreSelect: (Int) -> Unit,
+    allGenres: List<Genre>,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        defaultGenres.forEach { genre ->
+            GenrePillButton(
+                text = genre.name,
+                selected = selectedGenreId == genre.id,
+                onClick = { onGenreSelect(genre.id) },
+            )
+        }
+
+        if (allGenres.isNotEmpty()) {
+            val otherGenres = allGenres.filter { g ->
+                defaultGenres.none { it.id == g.id }
+            }
+            if (otherGenres.isNotEmpty()) {
+                otherGenres.take(10).forEach { genre ->
+                    GenrePillButton(
+                        text = genre.name,
+                        selected = selectedGenreId == genre.id,
+                        onClick = { onGenreSelect(genre.id) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenrePillButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) AnimeAccent else SurfaceColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = if (selected) Color.White else Color(0xFF888888),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun DiscoverAnimeRow(
+    items: List<DiscoveredAnime>,
+    isLoading: Boolean,
+    error: String?,
+    onThumbnailClick: (DiscoveredAnime) -> Unit,
+    onSearchClick: (DiscoveredAnime) -> Unit,
+    onLoadMore: () -> Unit,
+    hasMore: Boolean,
+) {
+    Column {
+        if (error != null && items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(AYMR.strings.failed_to_load_anime),
+                    color = Color(0xFF888888),
+                )
+            }
+        } else if (items.isEmpty() && !isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(AYMR.strings.no_anime_found),
+                    color = Color(0xFF888888),
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items.forEach { anime ->
+                    DiscoverAnimeCard(
+                        anime = anime,
+                        onThumbnailClick = { onThumbnailClick(anime) },
+                        onSearchClick = { onSearchClick(anime) },
+                    )
+                }
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .width(110.dp)
+                            .height(160.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = AnimeAccent,
+                        )
+                    }
+                }
+
+                if (hasMore && !isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .width(110.dp)
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SurfaceColor)
+                            .clickable { onLoadMore() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Load more",
+                            color = AnimeAccent,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoverAnimeCard(
+    anime: DiscoveredAnime,
+    onThumbnailClick: () -> Unit,
+    onSearchClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .width(110.dp)
+            .aspectRatio(2f / 3f),
+        shape = RoundedCornerShape(8.dp),
+        onClick = onThumbnailClick,
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = anime.imageUrl,
+                contentDescription = anime.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(24.dp)
+                    .background(
+                        Color.Black.copy(alpha = 0.6f),
+                        CircleShape,
+                    ),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.85f),
+                            ),
+                        ),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = anime.title,
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun RecentRow(
     items: List<LibraryAnime>,
     getOverlayText: (LibraryAnime) -> String,
     onItemClick: (Long) -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(items, key = { it.id }) { item ->
             val anime = item.anime
@@ -343,8 +623,7 @@ private fun RecentMangaRow(
     onItemClick: (Long) -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(items, key = { it.id }) { item ->
             val manga = item.manga
