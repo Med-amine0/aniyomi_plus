@@ -130,7 +130,10 @@ data object TrackerDashboardTab : Tab {
                             navigator.push(WebViewScreen(anime.siteUrl, anime.title))
                         },
                         onAnimeSearchClick = { anime ->
-                            val searchUrl = "https://anilist.co/search/anime?search=${URLEncoder.encode(anime.title, "UTF-8")}"
+                            val searchUrl = "https://anilist.co/search/anime?search=${URLEncoder.encode(
+                                anime.title,
+                                "UTF-8",
+                            )}"
                             context.openInBrowser(searchUrl)
                         },
                         onLoadMore = { screenModel.loadMore() },
