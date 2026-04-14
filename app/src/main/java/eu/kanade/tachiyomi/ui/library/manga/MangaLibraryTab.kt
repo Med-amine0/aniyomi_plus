@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.library.manga
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
@@ -19,8 +20,48 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import tachiyomi.presentation.core.util.collectAsState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalUriHandler
+import cafe.adriel.voyager.core.navigator.LocalTabNavigator
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.navigator.tab.TabOptions
+import eu.kanade.domain.ui.model.NavStyle
+import eu.kanade.domain.ui.model.currentNavigationStyle
+import eu.kanade.presentation.components.SnackbarHost
+import eu.kanade.presentation.components.Tab
+import eu.kanade.presentation.util.HapticFeedbackType
+import eu.kanade.presentation.util.LocalHapticFeedback
+import eu.kanade.presentation.util.collectAsState
+import eu.kanade.presentation.util.launchIO
+import eu.kanade.tachiyomi.data.library.manga.MangaLibraryUpdateJob
+import eu.kanade.tachiyomi.ui.home.HomeScreen
+import eu.kanade.tachiyomi.ui.library.manga.change_category.ChangeCategoryDialog
+import eu.kanade.tachiyomi.ui.library.manga.delete_library_entry.DeleteLibraryEntryDialog
+import eu.kanade.tachiyomi.ui.library.manga.settings.MangaLibrarySettingsDialog
+import eu.kanade.presentation.core.components.library.MangalibraryItem
+import eu.kanade.presentation.core.components.library.MangatabOptions
+import eu.kanade.presentation.core.screens.EmptyScreen
+import eu.kanade.presentation.core.screens.EmptyScreenAction
+import eu.kanade.presentation.core.screens.LoadingScreen
+import eu.kanade.presentation.library.manga.MangaLibraryContent
+import eu.kanade.presentation.library.components.LibraryBottomActionMenu
+import eu.kanade.presentation.library.components.LibraryToolbar
+import eu.kanade.presentation.library.components.ColumnsBottomSheet
+import kotlinx.coroutines.launch
+import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.library.manga.model.LibraryManga
+import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.reader.model.ReaderActivity
+import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.source.local.entries.manga.isLocal
+import uy.kohesive.injekt.injectLazy
+import eu.kanade.tachiyomi.ui.main.MainActivity
 
 data object MangaLibraryTab : Tab {
 
