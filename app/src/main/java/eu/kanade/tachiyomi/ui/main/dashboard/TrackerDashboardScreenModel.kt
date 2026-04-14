@@ -115,8 +115,10 @@ class TrackerDashboardScreenModel : ScreenModel {
 
     init {
         loadData()
-        fetchGenres()
-        fetchAnime()
+        screenModelScope.launch {
+            fetchGenres()
+            fetchAnime()
+        }
     }
 
     private fun loadData() {
@@ -169,69 +171,37 @@ class TrackerDashboardScreenModel : ScreenModel {
         }
     }
 
-    private fun fetchGenres() {
-        screenModelScope.launch {
-            try {
-                val response = withContext(Dispatchers.IO) {
-                    network.client.newCall(
-                        okhttp3.Request.Builder()
-                            .url("https://api.jikan.moe/v4/genres/anime")
-                            .build(),
-                    ).execute()
-                }
-
-                val body = response.body?.string() ?: return@launch
-                val json = org.json.JSONObject(body)
-                val dataArray = json.getJSONArray("data")
-
-                val genreList = mutableListOf<Genre>()
-                for (i in 0 until dataArray.length()) {
-                    val genreObj = dataArray.getJSONObject(i)
-                    genreList.add(
-                        Genre(
-                            id = genreObj.getInt("mal_id"),
-                            name = genreObj.getString("name"),
-                        ),
-                    )
-                }
-
-                _state.update { it.copy(genres = genreList) }
-            } catch (e: Exception) {
-                // Silently fail - genres are optional
+    private suspend fun fetchGenres() {
+        try {
+            val response = withContext(Dispatchers.IO) {
+                network.client.newCall(
+                    okhttp3.Request.Builder()
+                        .url("https://api.jikan.moe/v4/genres/anime")
+                        .build(),
+                ).execute()
             }
-        }
-    }
 
-    private suspend fun fetchWithRetry(url: String, maxRetries: Int = 3): String? {
-        for (attempt in 1..maxRetries) {
-            try {
-                val response = withContext(Dispatchers.IO) {
-                    network.client.newCall(
-                        okhttp3.Request.Builder()
-                            .url(url)
-                            .build(),
-                    ).execute()
-                }
+            if (!response.isSuccessful) return
 
-                if (response.code == 429) {
-                    // Rate limited, wait and retry
-                    delay(1000L * attempt)
-                    continue
-                }
+            val body = response.body?.string() ?: return
+            val json = org.json.JSONObject(body)
+            val dataArray = json.getJSONArray("data")
 
-                if (!response.isSuccessful && response.code != 200) {
-                    delay(500L * attempt)
-                    continue
-                }
-
-                return response.body?.string()
-            } catch (e: Exception) {
-                if (attempt < maxRetries) {
-                    delay(500L * attempt)
-                }
+            val genreList = mutableListOf<Genre>()
+            for (i in 0 until dataArray.length()) {
+                val genreObj = dataArray.getJSONObject(i)
+                genreList.add(
+                    Genre(
+                        id = genreObj.getInt("mal_id"),
+                        name = genreObj.getString("name"),
+                    ),
+                )
             }
+
+            _state.update { it.copy(genres = genreList) }
+        } catch (e: Exception) {
+            // Silently fail - genres are optional
         }
-        return null
     }
 
     private fun fetchAnime(append: Boolean = false) {
@@ -246,6 +216,8 @@ class TrackerDashboardScreenModel : ScreenModel {
             }
 
             try {
+                delay(400)
+
                 val page = if (append) currentState.currentPage + 1 else 1
                 val genreId = currentState.selectedGenreId
 
@@ -255,20 +227,28 @@ class TrackerDashboardScreenModel : ScreenModel {
                     "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12&order_by=score&sort=desc"
                 }
 
-                // Respect rate limit: wait before making request
-                if (!append) {
-                    delay(350) // ~3 requests per second
+                val response = withContext(Dispatchers.IO) {
+                    network.client.newCall(
+                        okhttp3.Request.Builder()
+                            .url(url)
+                            .build(),
+                    ).execute()
                 }
 
-                val body = fetchWithRetry(url)
+                if (response.code == 429) {
+                    delay(1000)
+                    _state.update { it.copy(isLoadingMore = false, discoverError = "Rate limited, tap to retry") }
+                    return@launch
+                }
 
+                if (!response.isSuccessful) {
+                    _state.update { it.copy(isLoadingMore = false, discoverError = "Failed to load") }
+                    return@launch
+                }
+
+                val body = response.body?.string()
                 if (body == null) {
-                    _state.update {
-                        it.copy(
-                            isLoadingMore = false,
-                            discoverError = "Failed to load anime",
-                        )
-                    }
+                    _state.update { it.copy(isLoadingMore = false, discoverError = "Empty response") }
                     return@launch
                 }
 

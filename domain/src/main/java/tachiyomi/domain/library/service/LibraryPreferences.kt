@@ -99,17 +99,17 @@ class LibraryPreferences(
 
     // Mixture Columns
 
-    fun animePortraitColumns() = preferenceStore.getInt("pref_animelib_columns_portrait_key", 0)
-    fun mangaPortraitColumns() = preferenceStore.getInt("pref_library_columns_portrait_key", 0)
+    fun animePortraitColumns() = preferenceStore.getInt("pref_animelib_columns_portrait_key", 3)
+    fun mangaPortraitColumns() = preferenceStore.getInt("pref_library_columns_portrait_key", 3)
 
-    fun animeLandscapeColumns() = preferenceStore.getInt("pref_animelib_columns_landscape_key", 0)
-    fun mangaLandscapeColumns() = preferenceStore.getInt("pref_library_columns_landscape_key", 0)
+    fun animeLandscapeColumns() = preferenceStore.getInt("pref_animelib_columns_landscape_key", 3)
+    fun mangaLandscapeColumns() = preferenceStore.getInt("pref_library_columns_landscape_key", 3)
 
     // Entry Columns (for entries within categories)
-    fun animeEntryPortraitColumns() = preferenceStore.getInt("pref_anime_entry_columns_portrait_key", 0)
-    fun animeEntryLandscapeColumns() = preferenceStore.getInt("pref_anime_entry_columns_landscape_key", 0)
-    fun mangaEntryPortraitColumns() = preferenceStore.getInt("pref_manga_entry_columns_portrait_key", 0)
-    fun mangaEntryLandscapeColumns() = preferenceStore.getInt("pref_manga_entry_columns_landscape_key", 0)
+    fun animeEntryPortraitColumns() = preferenceStore.getInt("pref_anime_entry_columns_portrait_key", 3)
+    fun animeEntryLandscapeColumns() = preferenceStore.getInt("pref_anime_entry_columns_landscape_key", 3)
+    fun mangaEntryPortraitColumns() = preferenceStore.getInt("pref_manga_entry_columns_portrait_key", 3)
+    fun mangaEntryLandscapeColumns() = preferenceStore.getInt("pref_manga_entry_columns_landscape_key", 3)
 
     // Mixture Filter
 
