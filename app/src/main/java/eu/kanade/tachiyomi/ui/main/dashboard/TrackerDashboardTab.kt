@@ -110,6 +110,7 @@ data object TrackerDashboardTab : Tab {
         val screenModel = rememberScreenModel { TrackerDashboardScreenModel() }
         val state by screenModel.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -130,7 +131,6 @@ data object TrackerDashboardTab : Tab {
                         onMangaClick = { navigator.push(MangaScreen(it)) },
                         onGenreSelect = { screenModel.selectGenre(it) },
                         onAnimeSiteClick = { anime ->
-                            val context = LocalContext.current
                             val intent = Intent(ACTION_VIEW, Uri.parse(anime.siteUrl))
                             context.startActivity(intent)
                         },
