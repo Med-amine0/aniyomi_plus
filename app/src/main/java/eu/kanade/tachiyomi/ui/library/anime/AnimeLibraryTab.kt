@@ -27,7 +27,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.components.SnackbarHost
-import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.core.screens.EmptyScreen
 import eu.kanade.presentation.core.screens.EmptyScreenAction
 import eu.kanade.presentation.core.screens.LoadingScreen
@@ -37,9 +36,9 @@ import eu.kanade.presentation.library.components.LibraryBottomActionMenu
 import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.util.HapticFeedbackType
 import eu.kanade.presentation.util.LocalHapticFeedback
+import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.util.collectAsState
 import eu.kanade.presentation.util.launchIO
-import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateJob
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.library.anime.change_category.ChangeCategoryDialog
