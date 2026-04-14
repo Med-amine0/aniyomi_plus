@@ -35,10 +35,10 @@ import eu.kanade.presentation.components.SnackbarHost
 import eu.kanade.presentation.core.screens.EmptyScreen
 import eu.kanade.presentation.core.screens.EmptyScreenAction
 import eu.kanade.presentation.core.screens.LoadingScreen
-import eu.kanade.presentation.library.manga.MangaLibraryContent
 import eu.kanade.presentation.library.components.ColumnsBottomSheet
 import eu.kanade.presentation.library.components.LibraryBottomActionMenu
 import eu.kanade.presentation.library.components.LibraryToolbar
+import eu.kanade.presentation.library.manga.MangaLibraryContent
 import eu.kanade.presentation.util.HapticFeedbackType
 import eu.kanade.presentation.util.LocalHapticFeedback
 import eu.kanade.presentation.util.Tab
