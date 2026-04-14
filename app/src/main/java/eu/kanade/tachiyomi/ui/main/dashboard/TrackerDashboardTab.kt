@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.main.dashboard
 
 import android.content.Intent
+import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -128,11 +130,9 @@ data object TrackerDashboardTab : Tab {
                         onMangaClick = { navigator.push(MangaScreen(it)) },
                         onGenreSelect = { screenModel.selectGenre(it) },
                         onAnimeSiteClick = { anime ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(anime.siteUrl))
-                            navigator.router.lastItem?.let {
-                                @Suppress("DEPRECATION")
-                                (it as? android.app.Activity)?.startActivity(intent)
-                            }
+                            val context = LocalContext.current
+                            val intent = Intent(ACTION_VIEW, Uri.parse(anime.siteUrl))
+                            context.startActivity(intent)
                         },
                         onLoadMore = { screenModel.loadMore() },
                         onRetry = { screenModel.retryDiscover() },
