@@ -18,7 +18,9 @@ import tachiyomi.domain.category.anime.interactor.GetVisibleAnimeCategories
 import tachiyomi.domain.category.anime.interactor.HideAnimeCategory
 import tachiyomi.domain.category.anime.interactor.RenameAnimeCategory
 import tachiyomi.domain.category.anime.interactor.ReorderAnimeCategory
+import tachiyomi.domain.category.anime.interactor.UpdateAnimeCategory
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -32,6 +34,7 @@ class AnimeCategoryScreenModel(
     private val deleteCategory: DeleteAnimeCategory = Injekt.get(),
     private val reorderCategory: ReorderAnimeCategory = Injekt.get(),
     private val renameCategory: RenameAnimeCategory = Injekt.get(),
+    private val updateCategory: UpdateAnimeCategory = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
 ) : StateScreenModel<AnimeCategoryScreenState>(AnimeCategoryScreenState.Loading) {
 
@@ -114,6 +117,21 @@ class AnimeCategoryScreenModel(
         }
     }
 
+    fun moveCategory(category: Category, newParentId: Long) {
+        screenModelScope.launch {
+            val update = CategoryUpdate(
+                id = category.id,
+                parentId = newParentId,
+            )
+            when (updateCategory.await(update)) {
+                is UpdateAnimeCategory.Result.Error -> _events.send(
+                    AnimeCategoryEvent.InternalError,
+                )
+                else -> {}
+            }
+        }
+    }
+
     fun showDialog(dialog: AnimeCategoryDialog) {
         mutableState.update {
             when (it) {
@@ -137,6 +155,7 @@ sealed interface AnimeCategoryDialog {
     data class Create(val parentId: Long?) : AnimeCategoryDialog
     data class Rename(val category: Category) : AnimeCategoryDialog
     data class Delete(val category: Category) : AnimeCategoryDialog
+    data class Move(val category: Category) : AnimeCategoryDialog
 }
 
 sealed interface AnimeCategoryEvent {

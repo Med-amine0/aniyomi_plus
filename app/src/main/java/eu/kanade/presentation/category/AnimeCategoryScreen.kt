@@ -34,6 +34,7 @@ fun AnimeCategoryScreen(
     onClickHide: (Category) -> Unit,
     onClickDelete: (Category) -> Unit,
     onChangeOrder: (Category, Int) -> Unit,
+    onMoveCategory: (Category) -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
     Scaffold(
@@ -61,6 +62,7 @@ fun AnimeCategoryScreen(
             onClickHide = onClickHide,
             onClickDelete = onClickDelete,
             onChangeOrder = onChangeOrder,
+            onMoveCategory = onMoveCategory,
         )
     }
 }
@@ -75,6 +77,7 @@ private fun CategoryContent(
     onClickHide: (Category) -> Unit,
     onClickDelete: (Category) -> Unit,
     onChangeOrder: (Category, Int) -> Unit,
+    onMoveCategory: (Category) -> Unit,
 ) {
     val categoriesState = remember { categories.toMutableStateList() }
     val reorderableState = rememberReorderableLazyListState(lazyListState, paddingValues) { from, to ->
@@ -108,6 +111,7 @@ private fun CategoryContent(
                     onRename = { onClickRename(category) },
                     onHide = { onClickHide(category) },
                     onDelete = { onClickDelete(category) },
+                    onMove = { onMoveCategory(category) },
                 )
             }
         }

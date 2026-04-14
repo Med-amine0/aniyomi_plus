@@ -18,7 +18,9 @@ import tachiyomi.domain.category.manga.interactor.GetVisibleMangaCategories
 import tachiyomi.domain.category.manga.interactor.HideMangaCategory
 import tachiyomi.domain.category.manga.interactor.RenameMangaCategory
 import tachiyomi.domain.category.manga.interactor.ReorderMangaCategory
+import tachiyomi.domain.category.manga.interactor.UpdateMangaCategory
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.category.model.CategoryUpdate
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
@@ -32,6 +34,7 @@ class MangaCategoryScreenModel(
     private val deleteCategory: DeleteMangaCategory = Injekt.get(),
     private val reorderCategory: ReorderMangaCategory = Injekt.get(),
     private val renameCategory: RenameMangaCategory = Injekt.get(),
+    private val updateCategory: UpdateMangaCategory = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
 ) : StateScreenModel<MangaCategoryScreenState>(MangaCategoryScreenState.Loading) {
 
@@ -114,6 +117,21 @@ class MangaCategoryScreenModel(
         }
     }
 
+    fun moveCategory(category: Category, newParentId: Long) {
+        screenModelScope.launch {
+            val update = CategoryUpdate(
+                id = category.id,
+                parentId = newParentId,
+            )
+            when (updateCategory.await(update)) {
+                is UpdateMangaCategory.Result.Error -> _events.send(
+                    MangaCategoryEvent.InternalError,
+                )
+                else -> {}
+            }
+        }
+    }
+
     fun showDialog(dialog: MangaCategoryDialog) {
         mutableState.update {
             when (it) {
@@ -137,6 +155,7 @@ sealed interface MangaCategoryDialog {
     data class Create(val parentId: Long?) : MangaCategoryDialog
     data class Rename(val category: Category) : MangaCategoryDialog
     data class Delete(val category: Category) : MangaCategoryDialog
+    data class Move(val category: Category) : MangaCategoryDialog
 }
 
 sealed interface MangaCategoryEvent {

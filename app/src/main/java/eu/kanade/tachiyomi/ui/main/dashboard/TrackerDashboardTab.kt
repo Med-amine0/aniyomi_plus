@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.main.dashboard
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -22,34 +24,38 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,10 +66,8 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
-import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.entries.manga.model.MangaCover
 import tachiyomi.domain.library.anime.LibraryAnime
@@ -123,13 +127,15 @@ data object TrackerDashboardTab : Tab {
                         onAnimeClick = { navigator.push(AnimeScreen(it)) },
                         onMangaClick = { navigator.push(MangaScreen(it)) },
                         onGenreSelect = { screenModel.selectGenre(it) },
-                        onAnimeThumbnailClick = { anime ->
-                            navigator.push(WebViewScreen(anime.siteUrl, anime.title))
-                        },
-                        onAnimeSearchClick = { anime ->
-                            navigator.push(GlobalAnimeSearchScreen(anime.title))
+                        onAnimeSiteClick = { anime ->
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(anime.siteUrl))
+                            navigator.router.lastItem?.let {
+                                @Suppress("DEPRECATION")
+                                (it as? android.app.Activity)?.startActivity(intent)
+                            }
                         },
                         onLoadMore = { screenModel.loadMore() },
+                        onRetry = { screenModel.retryDiscover() },
                         allGenres = state.genres,
                     )
                 }
@@ -146,9 +152,9 @@ private fun DashboardContent(
     onAnimeClick: (Long) -> Unit,
     onMangaClick: (Long) -> Unit,
     onGenreSelect: (Int) -> Unit,
-    onAnimeThumbnailClick: (DiscoveredAnime) -> Unit,
-    onAnimeSearchClick: (DiscoveredAnime) -> Unit,
+    onAnimeSiteClick: (DiscoveredAnime) -> Unit,
     onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
     allGenres: List<Genre>,
 ) {
     LazyColumn(
@@ -188,7 +194,7 @@ private fun DashboardContent(
 
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                GenrePillsRow(
+                GenreSection(
                     selectedGenreId = state.selectedGenreId,
                     onGenreSelect = onGenreSelect,
                     allGenres = allGenres,
@@ -197,13 +203,13 @@ private fun DashboardContent(
 
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                DiscoverAnimeRow(
+                DiscoverRow(
                     items = state.discoveredAnime,
                     isLoading = state.isLoadingMore,
                     error = state.discoverError,
-                    onThumbnailClick = onAnimeThumbnailClick,
-                    onSearchClick = onAnimeSearchClick,
+                    onSiteClick = onAnimeSiteClick,
                     onLoadMore = onLoadMore,
+                    onRetry = onRetry,
                     hasMore = state.hasMorePages,
                 )
             }
@@ -364,44 +370,98 @@ private fun EmptySection() {
             .height(100.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "No items",
-            color = Color(0xFF888888),
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(SurfaceColor),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "No items",
+                color = Color(0xFF444444),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+            )
+        }
     }
 }
 
 @Composable
-private fun GenrePillsRow(
+private fun GenreSection(
     selectedGenreId: Int,
     onGenreSelect: (Int) -> Unit,
     allGenres: List<Genre>,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        defaultGenres.forEach { genre ->
-            GenrePillButton(
-                text = genre.name,
-                selected = selectedGenreId == genre.id,
-                onClick = { onGenreSelect(genre.id) },
-            )
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            defaultGenres.forEach { genre ->
+                GenrePillButton(
+                    text = genre.name,
+                    selected = selectedGenreId == genre.id,
+                    onClick = { onGenreSelect(genre.id) },
+                )
+            }
         }
 
-        if (allGenres.isNotEmpty()) {
-            val otherGenres = allGenres.filter { g ->
-                defaultGenres.none { it.id == g.id }
-            }
-            if (otherGenres.isNotEmpty()) {
-                otherGenres.take(10).forEach { genre ->
-                    GenrePillButton(
-                        text = genre.name,
-                        selected = selectedGenreId == genre.id,
-                        onClick = { onGenreSelect(genre.id) },
+        var expanded by remember { mutableStateOf(false) }
+        val otherGenres = allGenres.filter { g -> defaultGenres.none { it.id == g.id } }
+
+        Box {
+            Text(
+                text = "Tags ▾",
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SurfaceColor)
+                    .clickable { expanded = true }
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                color = Color(0xFF888888),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(SurfaceColor),
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "Tags ▾",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                    },
+                )
+                HorizontalDivider(color = Color(0xFF333333))
+                otherGenres.take(20).forEach { genre ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                genre.name,
+                                color = if (selectedGenreId == genre.id) AnimeAccent else Color.White,
+                                fontWeight = if (selectedGenreId == genre.id) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        },
+                        onClick = {
+                            onGenreSelect(genre.id)
+                            expanded = false
+                        },
                     )
                 }
             }
@@ -433,38 +493,72 @@ private fun GenrePillButton(
 }
 
 @Composable
-private fun DiscoverAnimeRow(
+private fun DiscoverRow(
     items: List<DiscoveredAnime>,
     isLoading: Boolean,
     error: String?,
-    onThumbnailClick: (DiscoveredAnime) -> Unit,
-    onSearchClick: (DiscoveredAnime) -> Unit,
+    onSiteClick: (DiscoveredAnime) -> Unit,
     onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
     hasMore: Boolean,
 ) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleItem >= totalItems - 4
+        }.collect { shouldLoadMore ->
+            if (shouldLoadMore && hasMore && !isLoading && items.isNotEmpty()) {
+                onLoadMore()
+            }
+        }
+    }
+
     Column {
         if (error != null && items.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp),
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceColor)
+                    .clickable { onRetry() },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = stringResource(AYMR.strings.failed_to_load_anime),
-                    color = Color(0xFF888888),
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = error,
+                        color = Color(0xFF888888),
+                        fontSize = 12.sp,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Tap to retry",
+                        color = AnimeAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         } else if (items.isEmpty() && !isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp),
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceColor),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(AYMR.strings.no_anime_found),
-                    color = Color(0xFF888888),
+                    text = "No anime found",
+                    color = Color(0xFF444444),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
                 )
             }
         } else {
@@ -473,10 +567,9 @@ private fun DiscoverAnimeRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items.forEach { anime ->
-                    DiscoverAnimeCard(
+                    DiscoverCard(
                         anime = anime,
-                        onThumbnailClick = { onThumbnailClick(anime) },
-                        onSearchClick = { onSearchClick(anime) },
+                        onClick = { onSiteClick(anime) },
                     )
                 }
 
@@ -493,41 +586,22 @@ private fun DiscoverAnimeRow(
                         )
                     }
                 }
-
-                if (hasMore && !isLoading) {
-                    Box(
-                        modifier = Modifier
-                            .width(110.dp)
-                            .height(160.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(SurfaceColor)
-                            .clickable { onLoadMore() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "Load more",
-                            color = AnimeAccent,
-                            fontSize = 12.sp,
-                        )
-                    }
-                }
             }
         }
     }
 }
 
 @Composable
-private fun DiscoverAnimeCard(
+private fun DiscoverCard(
     anime: DiscoveredAnime,
-    onThumbnailClick: () -> Unit,
-    onSearchClick: () -> Unit,
+    onClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
             .width(110.dp)
             .aspectRatio(2f / 3f),
         shape = RoundedCornerShape(8.dp),
-        onClick = onThumbnailClick,
+        onClick = onClick,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
@@ -536,25 +610,6 @@ private fun DiscoverAnimeCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
-
-            IconButton(
-                onClick = onSearchClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(24.dp)
-                    .background(
-                        Color.Black.copy(alpha = 0.6f),
-                        CircleShape,
-                    ),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp),
-                )
-            }
 
             Box(
                 modifier = Modifier
@@ -580,6 +635,7 @@ private fun DiscoverAnimeCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = 4.dp),
+                    textAlign = TextAlign.Center,
                 )
             }
         }
@@ -886,7 +942,7 @@ private fun CompletedSection(
             items.take(10).forEachIndexed { index, item ->
                 CompletedRow(
                     title = item.anime.title,
-                    subtitle = "${item.totalCount}/${item.totalCount}",
+                    subtitle = "Ep ${item.totalCount}/${item.totalCount}",
                     accentColor = AnimeAccent,
                     onClick = { onItemClick(item.id) },
                 )

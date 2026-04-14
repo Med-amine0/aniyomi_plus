@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,20 +93,14 @@ data class TrackerDashboardState(
             0f
         }
 
-    fun getProgressText(libraryAnime: LibraryAnime): String =
-        "Ep ${libraryAnime.seenCount}/${libraryAnime.totalCount}"
-
-    fun getProgressText(libraryManga: LibraryManga): String =
-        "Ch. ${libraryManga.readCount}"
-
     fun getOverlayText(libraryAnime: LibraryAnime): String {
         val percent = (getProgressPercent(libraryAnime) * 100).toInt()
-        return "$percent% • ${getProgressText(libraryAnime)}"
+        return "$percent% • Ep ${libraryAnime.seenCount}/${libraryAnime.totalCount}"
     }
 
     fun getOverlayText(libraryManga: LibraryManga): String {
         val percent = (getProgressPercent(libraryManga) * 100).toInt()
-        return "$percent% • ${getProgressText(libraryManga)}"
+        return "$percent% • Ch. ${libraryManga.readCount}"
     }
 }
 
@@ -207,6 +202,38 @@ class TrackerDashboardScreenModel : ScreenModel {
         }
     }
 
+    private suspend fun fetchWithRetry(url: String, maxRetries: Int = 3): String? {
+        for (attempt in 1..maxRetries) {
+            try {
+                val response = withContext(Dispatchers.IO) {
+                    network.client.newCall(
+                        okhttp3.Request.Builder()
+                            .url(url)
+                            .build(),
+                    ).execute()
+                }
+
+                if (response.code == 429) {
+                    // Rate limited, wait and retry
+                    delay(1000L * attempt)
+                    continue
+                }
+
+                if (!response.isSuccessful && response.code != 200) {
+                    delay(500L * attempt)
+                    continue
+                }
+
+                return response.body?.string()
+            } catch (e: Exception) {
+                if (attempt < maxRetries) {
+                    delay(500L * attempt)
+                }
+            }
+        }
+        return null
+    }
+
     private fun fetchAnime(append: Boolean = false) {
         val currentState = _state.value
         if (currentState.isLoadingMore && !append) return
@@ -228,15 +255,23 @@ class TrackerDashboardScreenModel : ScreenModel {
                     "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12&order_by=score&sort=desc"
                 }
 
-                val response = withContext(Dispatchers.IO) {
-                    network.client.newCall(
-                        okhttp3.Request.Builder()
-                            .url(url)
-                            .build(),
-                    ).execute()
+                // Respect rate limit: wait before making request
+                if (!append) {
+                    delay(350) // ~3 requests per second
                 }
 
-                val body = response.body?.string() ?: throw Exception("Empty response")
+                val body = fetchWithRetry(url)
+
+                if (body == null) {
+                    _state.update {
+                        it.copy(
+                            isLoadingMore = false,
+                            discoverError = "Failed to load anime",
+                        )
+                    }
+                    return@launch
+                }
+
                 val json = org.json.JSONObject(body)
                 val dataArray = json.getJSONArray("data")
                 val pagination = json.getJSONObject("pagination")
@@ -266,6 +301,7 @@ class TrackerDashboardScreenModel : ScreenModel {
                         currentPage = page,
                         hasMorePages = hasMore,
                         isLoadingMore = false,
+                        discoverError = null,
                     )
                 }
             } catch (e: Exception) {
@@ -296,5 +332,9 @@ class TrackerDashboardScreenModel : ScreenModel {
         val currentState = _state.value
         if (currentState.isLoadingMore || !currentState.hasMorePages) return
         fetchAnime(append = true)
+    }
+
+    fun retryDiscover() {
+        fetchAnime()
     }
 }

@@ -23,6 +23,7 @@ import eu.kanade.presentation.category.MangaCategoryScreen
 import eu.kanade.presentation.category.components.CategoryCreateDialog
 import eu.kanade.presentation.category.components.CategoryDeleteDialog
 import eu.kanade.presentation.category.components.CategoryRenameDialog
+import eu.kanade.presentation.category.components.MoveCategoryDialog
 import eu.kanade.presentation.components.TabContent
 import kotlinx.collections.immutable.toImmutableList
 import tachiyomi.i18n.aniyomi.AYMR
@@ -67,6 +68,7 @@ fun Screen.mangaCategoryTab(): TabContent {
                         onClickHide = screenModel::hideCategory,
                         onClickDelete = { screenModel.showDialog(MangaCategoryDialog.Delete(it)) },
                         onChangeOrder = screenModel::changeOrder,
+                        onMoveCategory = { screenModel.showDialog(MangaCategoryDialog.Move(it)) },
                     )
                 }
 
@@ -92,6 +94,14 @@ fun Screen.mangaCategoryTab(): TabContent {
                             onDismissRequest = screenModel::dismissDialog,
                             onDelete = { screenModel.deleteCategory(dialog.category.id) },
                             category = dialog.category.name,
+                        )
+                    }
+                    is MangaCategoryDialog.Move -> {
+                        MoveCategoryDialog(
+                            category = dialog.category,
+                            categories = successState.categories.toList(),
+                            onDismissRequest = screenModel::dismissDialog,
+                            onMove = { newParent -> screenModel.moveCategory(dialog.category, newParent.id) },
                         )
                     }
                 }
