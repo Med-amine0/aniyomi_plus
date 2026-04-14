@@ -27,7 +27,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.components.SnackbarHost
-import eu.kanade.presentation.components.Tab
+import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.util.HapticFeedbackType
 import eu.kanade.presentation.util.LocalHapticFeedback
 import eu.kanade.presentation.util.collectAsState
