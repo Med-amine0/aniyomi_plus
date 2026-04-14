@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.library.manga
 
-import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
@@ -19,47 +18,54 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
-import cafe.adriel.voyager.core.navigator.LocalTabNavigator
+import androidx.compose.ui.util.fastAll
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.domain.ui.model.NavStyle
-import eu.kanade.domain.ui.model.currentNavigationStyle
-import eu.kanade.presentation.components.SnackbarHost
-import eu.kanade.presentation.core.screens.EmptyScreen
-import eu.kanade.presentation.core.screens.EmptyScreenAction
-import eu.kanade.presentation.core.screens.LoadingScreen
-import eu.kanade.presentation.library.components.ColumnsBottomSheet
-import eu.kanade.presentation.library.components.LibraryBottomActionMenu
+import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.entries.components.LibraryBottomActionMenu
+import eu.kanade.presentation.library.DeleteLibraryEntryDialog
 import eu.kanade.presentation.library.components.LibraryToolbar
+import eu.kanade.presentation.library.components.ColumnsBottomSheet
 import eu.kanade.presentation.library.manga.MangaLibraryContent
-import eu.kanade.presentation.util.HapticFeedbackType
-import eu.kanade.presentation.util.LocalHapticFeedback
+import eu.kanade.presentation.library.manga.MangaLibrarySettingsDialog
+import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
-import eu.kanade.presentation.util.collectAsState
-import eu.kanade.presentation.util.launchIO
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.library.manga.MangaLibraryUpdateJob
+import eu.kanade.tachiyomi.ui.browse.manga.source.globalsearch.GlobalMangaSearchScreen
+import eu.kanade.tachiyomi.ui.category.CategoriesTab
+import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
-import eu.kanade.tachiyomi.ui.library.manga.change_category.ChangeCategoryDialog
-import eu.kanade.tachiyomi.ui.library.manga.delete_library_entry.DeleteLibraryEntryDialog
-import eu.kanade.tachiyomi.ui.library.manga.settings.MangaLibrarySettingsDialog
 import eu.kanade.tachiyomi.ui.main.MainActivity
+import eu.kanade.tachiyomi.ui.reader.ReaderActivity
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.manga.model.LibraryManga
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.reader.model.ReaderActivity
+import tachiyomi.domain.entries.manga.model.Manga
+import tachiyomi.domain.library.manga.LibraryManga
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.screens.EmptyScreen
+import tachiyomi.presentation.core.screens.EmptyScreenAction
+import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.entries.manga.isLocal
-import uy.kohesive.injekt.injectLazy
 
 data object MangaLibraryTab : Tab {
 
@@ -144,13 +150,13 @@ data object MangaLibraryTab : Tab {
                         )
                     },
                     onClickFilter = screenModel::showSettingsDialog,
-                    onClickColumns = { showColumnsSheet = true },
                     onClickRefresh = {
                         onClickRefresh(
                             state.categories[screenModel.activeCategoryIndex],
                         )
                     },
                     onClickGlobalUpdate = { onClickRefresh(null) },
+                    onClickColumns = { showColumnsSheet = true },
                     onClickOpenRandomEntry = {
                         scope.launch {
                             val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
@@ -248,7 +254,7 @@ data object MangaLibraryTab : Tab {
                             )
                         },
                         getEntryColumnsForOrientation = {
-                            screenModel::getEntryColumnsPreferenceForCurrentOrientation
+                            screenModel.getEntryColumnsPreferenceForCurrentOrientation(it)
                         },
                     ) { state.getLibraryItemsByPage(it) }
                 }
@@ -298,16 +304,6 @@ data object MangaLibraryTab : Tab {
             null -> {}
         }
 
-        if (showColumnsSheet) {
-            ColumnsBottomSheet(
-                currentColumns = entryColumnsPref.value,
-                onColumnsChange = { newColumns ->
-                    entryColumnsPref.value = newColumns
-                },
-                onDismiss = { showColumnsSheet = false },
-            )
-        }
-
         BackHandler(enabled = state.selectionMode || state.searchQuery != null) {
             when {
                 state.selectionMode -> screenModel.clearSelection()
@@ -328,6 +324,16 @@ data object MangaLibraryTab : Tab {
         LaunchedEffect(Unit) {
             launch { queryEvent.receiveAsFlow().collect(screenModel::search) }
             launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { screenModel.showSettingsDialog() } }
+        }
+
+        if (showColumnsSheet) {
+            ColumnsBottomSheet(
+                currentColumns = entryColumnsPref.value,
+                onColumnsChange = { newColumns ->
+                    entryColumnsPref.value = newColumns
+                },
+                onDismiss = { showColumnsSheet = false },
+            )
         }
     }
 

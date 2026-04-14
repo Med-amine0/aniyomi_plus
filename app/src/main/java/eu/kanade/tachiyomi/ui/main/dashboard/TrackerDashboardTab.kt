@@ -48,7 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,10 +60,10 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
-import eu.kanade.tachiyomi.util.system.openInBrowser
 import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.entries.manga.model.MangaCover
 import tachiyomi.domain.library.anime.LibraryAnime
@@ -73,7 +72,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
-import java.net.URLEncoder
 
 private val AnimeAccent = Color(0xFF3B82F6)
 private val MangaAccent = Color(0xFFF97316)
@@ -106,7 +104,6 @@ data object TrackerDashboardTab : Tab {
         val screenModel = rememberScreenModel { TrackerDashboardScreenModel() }
         val state by screenModel.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
-        val context = LocalContext.current
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -130,11 +127,7 @@ data object TrackerDashboardTab : Tab {
                             navigator.push(WebViewScreen(anime.siteUrl, anime.title))
                         },
                         onAnimeSearchClick = { anime ->
-                            val searchUrl = "https://anilist.co/search/anime?search=${URLEncoder.encode(
-                                anime.title,
-                                "UTF-8",
-                            )}"
-                            context.openInBrowser(searchUrl)
+                            navigator.push(GlobalAnimeSearchScreen(anime.title))
                         },
                         onLoadMore = { screenModel.loadMore() },
                         allGenres = state.genres,
