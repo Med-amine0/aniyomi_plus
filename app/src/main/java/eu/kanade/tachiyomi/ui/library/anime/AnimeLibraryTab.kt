@@ -18,40 +18,53 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import cafe.adriel.voyager.core.navigator.LocalTabNavigator
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.util.fastAll
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
-import eu.kanade.presentation.components.SnackbarHost
-import eu.kanade.presentation.core.screens.EmptyScreen
-import eu.kanade.presentation.core.screens.EmptyScreenAction
-import eu.kanade.presentation.core.screens.LoadingScreen
+import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.entries.components.LibraryBottomActionMenu
+import eu.kanade.presentation.library.DeleteLibraryEntryDialog
 import eu.kanade.presentation.library.anime.AnimeLibraryContent
-import eu.kanade.presentation.library.components.ColumnsBottomSheet
-import eu.kanade.presentation.library.components.LibraryBottomActionMenu
+import eu.kanade.presentation.library.anime.AnimeLibrarySettingsDialog
 import eu.kanade.presentation.library.components.LibraryToolbar
-import eu.kanade.presentation.util.HapticFeedbackType
-import eu.kanade.presentation.util.LocalHapticFeedback
+import eu.kanade.presentation.library.components.ColumnsBottomSheet
+import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
-import eu.kanade.presentation.util.collectAsState
-import eu.kanade.presentation.util.launchIO
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateJob
+import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
+import eu.kanade.tachiyomi.ui.category.CategoriesTab
+import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
-import eu.kanade.tachiyomi.ui.library.anime.change_category.ChangeCategoryDialog
-import eu.kanade.tachiyomi.ui.library.anime.delete_library_entry.DeleteLibraryEntryDialog
-import eu.kanade.tachiyomi.ui.library.anime.settings.AnimeLibrarySettingsDialog
+import eu.kanade.tachiyomi.ui.main.MainActivity
+import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
-import tachiyomi.domain.library.anime.model.LibraryAnime
-import tachiyomi.domain.library.service.LibraryPreferences
-import tachiyomi.domain.player.model.PlayerPreferences
+import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.items.episode.model.Episode
+import tachiyomi.domain.library.anime.LibraryAnime
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.screens.EmptyScreen
+import tachiyomi.presentation.core.screens.EmptyScreenAction
+import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.entries.anime.isLocal
 import uy.kohesive.injekt.injectLazy
 
@@ -130,13 +143,13 @@ data object AnimeLibraryTab : Tab {
                         )
                     },
                     onClickFilter = screenModel::showSettingsDialog,
-                    onClickColumns = { showColumnsSheet = true },
                     onClickRefresh = {
                         onClickRefresh(
                             state.categories[screenModel.activeCategoryIndex],
                         )
                     },
                     onClickGlobalUpdate = { onClickRefresh(null) },
+                    onClickColumns = { showColumnsSheet = true },
                     onClickOpenRandomEntry = {
                         scope.launch {
                             val randomItem = screenModel.getRandomAnimelibItemForCurrentCategory()
@@ -221,7 +234,7 @@ data object AnimeLibraryTab : Tab {
                             )
                         },
                         getEntryColumnsForOrientation = {
-                            screenModel::getEntryColumnsPreferenceForCurrentOrientation
+                            screenModel.getEntryColumnsPreferenceForCurrentOrientation(it)
                         },
                     ) { state.getAnimelibItemsByPage(it) }
                 }
@@ -270,16 +283,6 @@ data object AnimeLibraryTab : Tab {
             null -> {}
         }
 
-        if (showColumnsSheet) {
-            ColumnsBottomSheet(
-                currentColumns = entryColumnsPref.value,
-                onColumnsChange = { newColumns ->
-                    entryColumnsPref.value = newColumns
-                },
-                onDismiss = { showColumnsSheet = false },
-            )
-        }
-
         BackHandler(enabled = state.selectionMode || state.searchQuery != null) {
             when {
                 state.selectionMode -> screenModel.clearSelection()
@@ -300,6 +303,16 @@ data object AnimeLibraryTab : Tab {
         LaunchedEffect(Unit) {
             launch { queryEvent.receiveAsFlow().collect(screenModel::search) }
             launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { screenModel.showSettingsDialog() } }
+        }
+
+        if (showColumnsSheet) {
+            ColumnsBottomSheet(
+                currentColumns = entryColumnsPref.value,
+                onColumnsChange = { newColumns ->
+                    entryColumnsPref.value = newColumns
+                },
+                onDismiss = { showColumnsSheet = false },
+            )
         }
     }
 
