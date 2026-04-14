@@ -582,4 +582,10 @@
     <string name="pref_download_fillermarked_items">Allow downloading of fillermarked episodes</string>
     <string name="show_episode_previews">Episode thumbnails</string>
     <string name="show_episode_summaries">Episode summaries</string>
+    <string name="label_dach">Dach</string>
+    <string name="recently_viewed">Recently Viewed</string>
+    <string name="discover">Discover</string>
+    <string name="trending">Trending</string>
+    <string name="no_anime_found">No anime found</string>
+    <string name="failed_to_load_anime">Failed to load anime</string>
 </resources>

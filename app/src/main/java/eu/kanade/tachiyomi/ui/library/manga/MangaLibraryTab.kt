@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import eu.kanade.domain.ui.model.NavStyle
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.entries.components.LibraryBottomActionMenu
 import eu.kanade.presentation.library.DeleteLibraryEntryDialog
+import eu.kanade.presentation.library.components.ColumnsBottomSheet
 import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.library.manga.MangaLibraryContent
 import eu.kanade.presentation.library.manga.MangaLibrarySettingsDialog
@@ -100,6 +102,8 @@ data object MangaLibraryTab : Tab {
         val state by screenModel.state.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
+        var showColumnsSheet by remember { mutableStateOf(false) }
+        val entryColumnsPref = screenModel.getEntryColumnsPreferenceForCurrentOrientation(true)
 
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = MangaLibraryUpdateJob.startNow(context, category)
@@ -152,6 +156,7 @@ data object MangaLibraryTab : Tab {
                         )
                     },
                     onClickGlobalUpdate = { onClickRefresh(null) },
+                    onClickColumns = { showColumnsSheet = true },
                     onClickOpenRandomEntry = {
                         scope.launch {
                             val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
@@ -248,6 +253,9 @@ data object MangaLibraryTab : Tab {
                                 it,
                             )
                         },
+                        getEntryColumnsForOrientation = {
+                            screenModel.getEntryColumnsPreferenceForCurrentOrientation(it)
+                        },
                     ) { state.getLibraryItemsByPage(it) }
                 }
             }
@@ -316,6 +324,16 @@ data object MangaLibraryTab : Tab {
         LaunchedEffect(Unit) {
             launch { queryEvent.receiveAsFlow().collect(screenModel::search) }
             launch { requestSettingsSheetEvent.receiveAsFlow().collectLatest { screenModel.showSettingsDialog() } }
+        }
+
+        if (showColumnsSheet) {
+            ColumnsBottomSheet(
+                currentColumns = entryColumnsPref.value,
+                onColumnsChange = { newColumns ->
+                    entryColumnsPref.value = newColumns
+                },
+                onDismiss = { showColumnsSheet = false },
+            )
         }
     }
 
