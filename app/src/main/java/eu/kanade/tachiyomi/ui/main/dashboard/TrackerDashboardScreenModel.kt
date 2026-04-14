@@ -177,6 +177,7 @@ class TrackerDashboardScreenModel : ScreenModel {
                 network.client.newCall(
                     okhttp3.Request.Builder()
                         .url("https://api.jikan.moe/v4/genres/anime")
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                         .build(),
                 ).execute()
             }
@@ -200,7 +201,7 @@ class TrackerDashboardScreenModel : ScreenModel {
 
             _state.update { it.copy(genres = genreList) }
         } catch (e: Exception) {
-            // Silently fail - genres are optional
+            // Silently fail
         }
     }
 
@@ -216,7 +217,8 @@ class TrackerDashboardScreenModel : ScreenModel {
             }
 
             try {
-                delay(400)
+                // Respect rate limit
+                delay(350)
 
                 val page = if (append) currentState.currentPage + 1 else 1
                 val genreId = currentState.selectedGenreId
@@ -231,12 +233,12 @@ class TrackerDashboardScreenModel : ScreenModel {
                     network.client.newCall(
                         okhttp3.Request.Builder()
                             .url(url)
+                            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                             .build(),
                     ).execute()
                 }
 
                 if (response.code == 429) {
-                    delay(1000)
                     _state.update { it.copy(isLoadingMore = false, discoverError = "Rate limited, tap to retry") }
                     return@launch
                 }
