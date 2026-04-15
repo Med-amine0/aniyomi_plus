@@ -202,7 +202,7 @@ data object DashSettingsScreen : Screen {
                                 )
                             }
                             Text(
-                                text = "  ${result.status ?: "ERROR"} • ${result.responseTime}ms",
+                                text = "  ${result.responseTime}ms",
                                 color = if (result.success) SuccessColor else ErrorColor,
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
