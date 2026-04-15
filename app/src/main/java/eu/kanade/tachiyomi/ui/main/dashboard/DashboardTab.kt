@@ -27,12 +27,15 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +45,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -115,14 +121,17 @@ data object DashboardTab : Tab {
                         onAnimeClick = { navigator.push(AnimeScreen(it)) },
                         onMangaClick = { navigator.push(MangaScreen(it)) },
                         onGenreSelect = { screenModel.selectGenre(it) },
-                        onAnimeSiteClick = { anime ->
+                        onAnimeCardClick = { anime ->
                             val intent = Intent(ACTION_VIEW, Uri.parse(anime.siteUrl))
                             context.startActivity(intent)
                         },
-                        onLoadMore = { screenModel.loadMore() },
-                        onRetry = { screenModel.retryDiscover() },
+                        onAnimeSearchClick = { anime ->
+                            // TODO: Launch anime search with title
+                        },
+                        onLoadMoreAnime = { screenModel.loadMoreAnime() },
+                        onLoadMoreMovies = { screenModel.loadMoreMovies() },
+                        onRetryAnime = { screenModel.retryAnime() },
                         onRetryMovies = { screenModel.retryMovies() },
-                        allGenres = state.genres,
                     )
                 }
             }
@@ -137,12 +146,13 @@ private fun DashboardContent(
     onShowAllToggle: () -> Unit,
     onAnimeClick: (Long) -> Unit,
     onMangaClick: (Long) -> Unit,
-    onGenreSelect: (Int?) -> Unit,
-    onAnimeSiteClick: (DiscoveredAnime) -> Unit,
-    onLoadMore: () -> Unit,
-    onRetry: () -> Unit,
+    onGenreSelect: (String?) -> Unit,
+    onAnimeCardClick: (DiscoveredAnime) -> Unit,
+    onAnimeSearchClick: (DiscoveredAnime) -> Unit,
+    onLoadMoreAnime: () -> Unit,
+    onLoadMoreMovies: () -> Unit,
+    onRetryAnime: () -> Unit,
     onRetryMovies: () -> Unit,
-    allGenres: List<Genre>,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -174,17 +184,13 @@ private fun DashboardContent(
                 }
             }
 
-            item {
-                Spacer(modifier = Modifier.height(20.dp))
-                SectionTitle(stringResource(AYMR.strings.discover))
-            }
+            item { Spacer(modifier = Modifier.height(20.dp)) }
 
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                GenreSection(
-                    selectedGenreId = state.selectedGenreId,
+                DiscoverSection(
+                    genres = state.genres,
+                    selectedGenre = state.selectedGenre,
                     onGenreSelect = onGenreSelect,
-                    allGenres = allGenres,
                 )
             }
 
@@ -197,12 +203,13 @@ private fun DashboardContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 DiscoverRow(
                     items = state.discoveredAnime,
-                    isLoading = state.isLoadingMore,
-                    error = state.discoverError,
-                    onSiteClick = onAnimeSiteClick,
-                    onLoadMore = onLoadMore,
-                    onRetry = onRetry,
-                    hasMore = state.hasMorePages,
+                    isLoading = state.isLoadingAnime,
+                    error = state.animeError,
+                    onCardClick = onAnimeCardClick,
+                    onSearchClick = onAnimeSearchClick,
+                    onLoadMore = onLoadMoreAnime,
+                    onRetry = onRetryAnime,
+                    hasMore = state.animeHasMore,
                 )
             }
 
@@ -215,12 +222,13 @@ private fun DashboardContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 DiscoverRow(
                     items = state.discoveredMovies,
-                    isLoading = false,
+                    isLoading = state.isLoadingMovies,
                     error = state.moviesError,
-                    onSiteClick = onAnimeSiteClick,
-                    onLoadMore = {},
+                    onCardClick = onAnimeCardClick,
+                    onSearchClick = onAnimeSearchClick,
+                    onLoadMore = onLoadMoreMovies,
                     onRetry = onRetryMovies,
-                    hasMore = false,
+                    hasMore = state.moviesHasMore,
                 )
             }
 
@@ -300,6 +308,94 @@ private fun DashboardContent(
                 } else {
                     EmptySection()
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoverSection(
+    genres: List<String>,
+    selectedGenre: String?,
+    onGenreSelect: (String?) -> Unit,
+) {
+    val curatedPills = listOf("Trending", "Action", "Adventure", "Comedy", "Isekai")
+    var showDropdown by remember { mutableStateOf(false) }
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SectionTitle(stringResource(AYMR.strings.discover))
+
+            Box {
+                Text(
+                    text = "Tags ▾",
+                    color = AnimeAccent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceColor)
+                        .clickable { showDropdown = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+
+                DropdownMenu(
+                    expanded = showDropdown,
+                    onDismissRequest = { showDropdown = false },
+                    modifier = Modifier.background(SurfaceColor),
+                ) {
+                    genres.forEach { genre ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = genre,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            onClick = {
+                                onGenreSelect(genre)
+                                showDropdown = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            curatedPills.forEach { pill ->
+                GenrePillButton(
+                    text = pill,
+                    selected = when {
+                        pill == "Trending" && selectedGenre == null -> true
+                        pill == selectedGenre -> true
+                        else -> false
+                    },
+                    onClick = {
+                        onGenreSelect(if (pill == "Trending") null else pill)
+                    },
+                )
+            }
+
+            genres.filter { genre -> genre !in curatedPills }.forEach { genre ->
+                GenrePillButton(
+                    text = genre,
+                    selected = selectedGenre == genre,
+                    onClick = { onGenreSelect(genre) },
+                )
             }
         }
     }
@@ -399,35 +495,6 @@ private fun EmptySection() {
 }
 
 @Composable
-private fun GenreSection(
-    selectedGenreId: Int?,
-    onGenreSelect: (Int?) -> Unit,
-    allGenres: List<Genre>,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        GenrePillButton(
-            text = "Trending",
-            selected = selectedGenreId == null,
-            onClick = { onGenreSelect(null) },
-        )
-
-        allGenres.forEach { genre ->
-            GenrePillButton(
-                text = genre.name,
-                selected = selectedGenreId == genre.id,
-                onClick = { onGenreSelect(genre.id) },
-            )
-        }
-    }
-}
-
-@Composable
 private fun GenrePillButton(
     text: String,
     selected: Boolean,
@@ -455,7 +522,8 @@ private fun DiscoverRow(
     items: List<DiscoveredAnime>,
     isLoading: Boolean,
     error: String?,
-    onSiteClick: (DiscoveredAnime) -> Unit,
+    onCardClick: (DiscoveredAnime) -> Unit,
+    onSearchClick: (DiscoveredAnime) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     hasMore: Boolean,
@@ -486,21 +554,10 @@ private fun DiscoverRow(
                     .clickable { onRetry() },
                 contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        text = error,
-                        color = Color(0xFF888888),
-                        fontSize = 12.sp,
-                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = error, color = Color(0xFF888888), fontSize = 12.sp)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Tap to retry",
-                        color = AnimeAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Text(text = "Tap to retry", color = AnimeAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         } else if (items.isEmpty() && !isLoading) {
@@ -512,12 +569,7 @@ private fun DiscoverRow(
                     .background(SurfaceColor),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "No anime found",
-                    color = Color(0xFF444444),
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp,
-                )
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AnimeAccent)
             }
         } else {
             Row(
@@ -527,7 +579,8 @@ private fun DiscoverRow(
                 items.forEach { anime ->
                     DiscoverCard(
                         anime = anime,
-                        onClick = { onSiteClick(anime) },
+                        onCardClick = { onCardClick(anime) },
+                        onSearchClick = { onSearchClick(anime) },
                     )
                 }
 
@@ -538,10 +591,7 @@ private fun DiscoverRow(
                             .height(160.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = AnimeAccent,
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AnimeAccent)
                     }
                 }
             }
@@ -552,14 +602,15 @@ private fun DiscoverRow(
 @Composable
 private fun DiscoverCard(
     anime: DiscoveredAnime,
-    onClick: () -> Unit,
+    onCardClick: () -> Unit,
+    onSearchClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
             .width(110.dp)
             .aspectRatio(2f / 3f),
         shape = RoundedCornerShape(8.dp),
-        onClick = onClick,
+        onClick = onCardClick,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
@@ -571,16 +622,29 @@ private fun DiscoverCard(
 
             Box(
                 modifier = Modifier
+                    .size(28.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable { onSearchClick() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "🔍",
+                    fontSize = 12.sp,
+                )
+            }
+
+            Box(
+                modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .height(40.dp)
                     .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f),
-                            ),
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
                         ),
                     ),
                 contentAlignment = Alignment.Center,
@@ -606,9 +670,7 @@ private fun RecentRow(
     getOverlayText: (LibraryAnime) -> String,
     onItemClick: (Long) -> Unit,
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(items, key = { it.id }) { item ->
             val anime = item.anime
             RecentCard(
@@ -632,9 +694,7 @@ private fun RecentMangaRow(
     getOverlayText: (LibraryManga) -> String,
     onItemClick: (Long) -> Unit,
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(items, key = { it.id }) { item ->
             val manga = item.manga
             RecentMangaCard(
@@ -680,10 +740,7 @@ private fun RecentCard(
                     .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f),
-                            ),
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
                         ),
                     ),
                 contentAlignment = Alignment.Center,
@@ -729,10 +786,7 @@ private fun RecentMangaCard(
                     .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f),
-                            ),
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
                         ),
                     ),
                 contentAlignment = Alignment.Center,
@@ -755,9 +809,7 @@ private fun InProgressRow(
     items: List<LibraryAnime>,
     onItemClick: (Long) -> Unit,
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(items, key = { it.id }) { item ->
             val anime = item.anime
             InProgressThumbnail(
@@ -768,11 +820,7 @@ private fun InProgressRow(
                     url = anime.thumbnailUrl,
                     lastModified = anime.coverLastModified,
                 ),
-                progress = if (item.totalCount > 0) {
-                    item.seenCount.toFloat() / item.totalCount.toFloat()
-                } else {
-                    0f
-                },
+                progress = if (item.totalCount > 0) item.seenCount.toFloat() / item.totalCount.toFloat() else 0f,
                 onClick = { onItemClick(item.id) },
             )
         }
@@ -784,9 +832,7 @@ private fun InProgressMangaRow(
     items: List<LibraryManga>,
     onItemClick: (Long) -> Unit,
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(items, key = { it.id }) { item ->
             val manga = item.manga
             InProgressMangaThumbnail(
@@ -797,11 +843,7 @@ private fun InProgressMangaRow(
                     url = manga.thumbnailUrl,
                     lastModified = manga.coverLastModified,
                 ),
-                progress = if (item.totalChapters > 0) {
-                    item.readCount.toFloat() / item.totalChapters.toFloat()
-                } else {
-                    0f
-                },
+                progress = if (item.totalChapters > 0) item.readCount.toFloat() / item.totalChapters.toFloat() else 0f,
                 onClick = { onItemClick(item.id) },
             )
         }
@@ -905,10 +947,7 @@ private fun CompletedSection(
                     onClick = { onItemClick(item.id) },
                 )
                 if (index < items.size - 1 && index < 9) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        color = Color(0xFF333333),
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp), color = Color(0xFF333333))
                 }
             }
         }
@@ -934,10 +973,7 @@ private fun CompletedMangaSection(
                     onClick = { onItemClick(item.id) },
                 )
                 if (index < items.size - 1 && index < 9) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        color = Color(0xFF333333),
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp), color = Color(0xFF333333))
                 }
             }
         }
@@ -975,11 +1011,7 @@ private fun CompletedRow(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "✓",
-                color = accentColor,
-                fontWeight = FontWeight.Bold,
-            )
+            Text(text = "✓", color = accentColor, fontWeight = FontWeight.Bold)
         }
     }
 }

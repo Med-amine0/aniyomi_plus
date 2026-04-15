@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.ui.main.dashboard
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
@@ -12,22 +11,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import tachiyomi.domain.entries.anime.interactor.GetLibraryAnime
 import tachiyomi.domain.entries.manga.interactor.GetLibraryManga
 import tachiyomi.domain.library.anime.LibraryAnime
 import tachiyomi.domain.library.manga.LibraryManga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
-
-@Immutable
-data class Genre(val id: Int, val name: String)
 
 @Immutable
 data class DiscoveredAnime(
-    val malId: Long,
     val title: String,
     val imageUrl: String,
     val siteUrl: String,
@@ -41,15 +38,19 @@ data class DashboardState(
     val showAllExpanded: Boolean = false,
     val allAnime: List<LibraryAnime> = emptyList(),
     val allManga: List<LibraryManga> = emptyList(),
-    val genres: List<Genre> = emptyList(),
-    val selectedGenreId: Int? = null,
+    val genres: List<String> = emptyList(),
+    val selectedGenre: String? = null,
     val discoveredAnime: List<DiscoveredAnime> = emptyList(),
     val discoveredMovies: List<DiscoveredAnime> = emptyList(),
-    val currentPage: Int = 1,
-    val isLoadingMore: Boolean = false,
-    val hasMorePages: Boolean = true,
-    val discoverError: String? = null,
+    val animePage: Int = 1,
+    val moviesPage: Int = 1,
+    val isLoadingAnime: Boolean = false,
+    val isLoadingMovies: Boolean = false,
+    val animeHasMore: Boolean = true,
+    val moviesHasMore: Boolean = true,
+    val animeError: String? = null,
     val moviesError: String? = null,
+    val genresError: String? = null,
 ) {
     val recentAnime: List<LibraryAnime>
         get() = allAnime
@@ -116,6 +117,10 @@ class DashboardScreenModel : ScreenModel {
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
+    companion object {
+        private const val ANILIST_URL = "https://graphql.anilist.co"
+    }
+
     init {
         loadData()
         screenModelScope.launch {
@@ -175,15 +180,27 @@ class DashboardScreenModel : ScreenModel {
         }
     }
 
-    private suspend fun fetchUrl(urlString: String): String? {
+    private suspend fun fetchGraphQL(query: String, variables: JSONObject = JSONObject()): JSONObject? {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL(urlString)
+                val url = URL(ANILIST_URL)
                 val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Accept", "application/json")
+                connection.doOutput = true
                 connection.connectTimeout = 15000
                 connection.readTimeout = 15000
+
+                val requestBody = JSONObject().apply {
+                    put("query", query)
+                    put("variables", variables)
+                }
+
+                OutputStreamWriter(connection.outputStream).use { writer ->
+                    writer.write(requestBody.toString())
+                    writer.flush()
+                }
 
                 val responseCode = connection.responseCode
                 if (responseCode != 200) {
@@ -191,188 +208,241 @@ class DashboardScreenModel : ScreenModel {
                     return@withContext null
                 }
 
-                connection.inputStream.bufferedReader().use { it.readText() }
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+
+                JSONObject(response)
             } catch (e: Exception) {
                 null
             }
         }
     }
 
-    private suspend fun fetchGenres() {
-        try {
-            val body = fetchUrl("https://api.jikan.moe/v4/genres/anime") ?: return
+    private fun fetchGenres() {
+        screenModelScope.launch {
+            val query = "query { GenreNames }"
 
-            val json = org.json.JSONObject(body)
-            val dataArray = json.getJSONArray("data")
+            try {
+                val json = fetchGraphQL(query) ?: run {
+                    _state.update { it.copy(genresError = "Failed to fetch genres") }
+                    return@launch
+                }
 
-            val genreList = mutableListOf<Genre>()
-            for (i in 0 until dataArray.length()) {
-                val genreObj = dataArray.getJSONObject(i)
-                genreList.add(
-                    Genre(
-                        id = genreObj.getInt("mal_id"),
-                        name = genreObj.getString("name"),
-                    ),
-                )
+                val genreNames = json.optJSONArray("data")?.let { arr ->
+                    (0 until arr.length()).map { arr.getString(it) }
+                } ?: emptyList()
+
+                _state.update { it.copy(genres = genreNames, genresError = null) }
+            } catch (e: Exception) {
+                _state.update { it.copy(genresError = "Failed to fetch genres") }
             }
-
-            _state.update { it.copy(genres = genreList) }
-        } catch (e: Exception) {
         }
     }
 
     private fun fetchAnime(append: Boolean = false) {
         val currentState = _state.value
-        if (currentState.isLoadingMore && !append) return
+        if (currentState.isLoadingAnime && !append) return
 
         screenModelScope.launch {
-            if (append) {
-                _state.update { it.copy(isLoadingMore = true) }
-            } else {
-                _state.update { it.copy(isLoadingMore = true, discoverError = null) }
-            }
+            _state.update { it.copy(isLoadingAnime = true, animeError = null) }
 
             try {
-                delay(350)
+                delay(200)
 
-                val page = if (append) currentState.currentPage + 1 else 1
-                val genreId = currentState.selectedGenreId
+                val page = if (append) currentState.animePage + 1 else 1
+                val genre = currentState.selectedGenre
 
-                val url = if (genreId == null) {
-                    "https://api.jikan.moe/v4/top/anime?page=$page&limit=12"
+                val query: String
+                val variables = JSONObject()
+
+                if (genre == null) {
+                    query = """
+                        query(${'$'}page: Int) {
+                            Page(page: ${'$'}page, perPage: 12) {
+                                pageInfo { hasNextPage }
+                                media(type: ANIME, sort: TRENDING_DESC) {
+                                    title { romaji }
+                                    coverImage { medium }
+                                    siteUrl
+                                }
+                            }
+                        }
+                    """.trimIndent()
+                    variables.put("page", page)
                 } else {
-                    "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12"
+                    query = """
+                        query(${'$'}page: Int, ${'$'}genre: String) {
+                            Page(page: ${'$'}page, perPage: 12) {
+                                pageInfo { hasNextPage }
+                                media(type: ANIME, genre: ${'$'}genre, sort: SCORE_DESC) {
+                                    title { romaji }
+                                    coverImage { medium }
+                                    siteUrl
+                                }
+                            }
+                        }
+                    """.trimIndent()
+                    variables.put("page", page)
+                    variables.put("genre", genre)
                 }
 
-                Log.d("Dashboard", "Fetching anime from: $url")
-
-                val body = fetchUrl(url)
-
-                if (body == null) {
-                    Log.e("Dashboard", "Failed to fetch anime - body is null")
-                    _state.update { it.copy(isLoadingMore = false, discoverError = "Tap to retry") }
+                val json = fetchGraphQL(query, variables) ?: run {
+                    _state.update { it.copy(isLoadingAnime = false, animeError = "Failed to fetch anime") }
                     return@launch
                 }
 
-                Log.d("Dashboard", "Got response body length: ${body.length}")
-
-                val json = org.json.JSONObject(body)
-                val dataArray = json.getJSONArray("data")
-                val pagination = json.getJSONObject("pagination")
-                val hasMore = pagination.getBoolean("has_next_page")
-
-                Log.d("Dashboard", "Parsing $dataArray.length items")
+                val pageData = json.optJSONObject("data")?.optJSONObject("Page")
+                val pageInfo = pageData?.optJSONObject("pageInfo")
+                val hasNextPage = pageInfo?.optBoolean("hasNextPage", false) ?: false
+                val mediaArray = pageData?.optJSONArray("media") ?: JSONArray()
 
                 val animeList = mutableListOf<DiscoveredAnime>()
-                for (i in 0 until dataArray.length()) {
-                    val animeObj = dataArray.getJSONObject(i)
-                    val images = animeObj.getJSONObject("images")
-                    val jpg = images.getJSONObject("jpg")
-                    val title = animeObj.getString("title")
-                    val encodedTitle = URLEncoder.encode(title, "UTF-8")
+                for (i in 0 until mediaArray.length()) {
+                    val media = mediaArray.optJSONObject(i) ?: continue
+                    val titleObj = media.optJSONObject("title") ?: continue
+                    val coverObj = media.optJSONObject("coverImage") ?: continue
 
                     animeList.add(
                         DiscoveredAnime(
-                            malId = animeObj.getLong("mal_id"),
-                            title = title,
-                            imageUrl = jpg.getString("image_url"),
-                            siteUrl = "https://anilist.co/search/anime?search=$encodedTitle",
+                            title = titleObj.optString("romaji", ""),
+                            imageUrl = coverObj.optString("medium", ""),
+                            siteUrl = media.optString("siteUrl", ""),
                         ),
                     )
                 }
 
-                Log.d("Dashboard", "Created ${animeList.size} DiscoveredAnime items")
-
-                _state.update {
-                    val newState = it.copy(
-                        discoveredAnime = if (append) it.discoveredAnime + animeList else animeList,
-                        currentPage = page,
-                        hasMorePages = hasMore,
-                        isLoadingMore = false,
-                        discoverError = null,
-                    )
-                    Log.d("Dashboard", "State updated - discoveredAnime size: ${newState.discoveredAnime.size}")
-                    newState
-                }
-            } catch (e: Exception) {
-                Log.e("Dashboard", "Exception fetching anime", e)
                 _state.update {
                     it.copy(
-                        isLoadingMore = false,
-                        discoverError = "Tap to retry",
+                        discoveredAnime = if (append) it.discoveredAnime + animeList else animeList,
+                        animePage = page,
+                        animeHasMore = hasNextPage,
+                        isLoadingAnime = false,
                     )
                 }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoadingAnime = false, animeError = "Failed to fetch anime") }
             }
         }
     }
 
-    private fun fetchMovies() {
+    private fun fetchMovies(append: Boolean = false) {
+        val currentState = _state.value
+        if (currentState.isLoadingMovies && !append) return
+
         screenModelScope.launch {
+            _state.update { it.copy(isLoadingMovies = true, moviesError = null) }
+
             try {
-                delay(350)
+                delay(200)
 
-                val body = fetchUrl("https://api.jikan.moe/v4/top/anime?type=movie&limit=12")
+                val page = if (append) currentState.moviesPage + 1 else 1
+                val genre = currentState.selectedGenre
 
-                if (body == null) {
-                    _state.update { it.copy(moviesError = "Failed to load movies") }
+                val query: String
+                val variables = JSONObject()
+
+                if (genre == null) {
+                    query = """
+                        query(${'$'}page: Int) {
+                            Page(page: ${'$'}page, perPage: 12) {
+                                pageInfo { hasNextPage }
+                                media(type: ANIME, format: MOVIE, sort: TRENDING_DESC) {
+                                    title { romaji }
+                                    coverImage { medium }
+                                    siteUrl
+                                }
+                            }
+                        }
+                    """.trimIndent()
+                    variables.put("page", page)
+                } else {
+                    query = """
+                        query(${'$'}page: Int, ${'$'}genre: String) {
+                            Page(page: ${'$'}page, perPage: 12) {
+                                pageInfo { hasNextPage }
+                                media(type: ANIME, format: MOVIE, genre: ${'$'}genre, sort: SCORE_DESC) {
+                                    title { romaji }
+                                    coverImage { medium }
+                                    siteUrl
+                                }
+                            }
+                        }
+                    """.trimIndent()
+                    variables.put("page", page)
+                    variables.put("genre", genre)
+                }
+
+                val json = fetchGraphQL(query, variables) ?: run {
+                    _state.update { it.copy(isLoadingMovies = false, moviesError = "Failed to fetch movies") }
                     return@launch
                 }
 
-                val json = org.json.JSONObject(body)
-                val dataArray = json.getJSONArray("data")
+                val pageData = json.optJSONObject("data")?.optJSONObject("Page")
+                val pageInfo = pageData?.optJSONObject("pageInfo")
+                val hasNextPage = pageInfo?.optBoolean("hasNextPage", false) ?: false
+                val mediaArray = pageData?.optJSONArray("media") ?: JSONArray()
 
                 val moviesList = mutableListOf<DiscoveredAnime>()
-                for (i in 0 until dataArray.length()) {
-                    val animeObj = dataArray.getJSONObject(i)
-                    val images = animeObj.getJSONObject("images")
-                    val jpg = images.getJSONObject("jpg")
-                    val title = animeObj.getString("title")
-                    val encodedTitle = URLEncoder.encode(title, "UTF-8")
+                for (i in 0 until mediaArray.length()) {
+                    val media = mediaArray.optJSONObject(i) ?: continue
+                    val titleObj = media.optJSONObject("title") ?: continue
+                    val coverObj = media.optJSONObject("coverImage") ?: continue
 
                     moviesList.add(
                         DiscoveredAnime(
-                            malId = animeObj.getLong("mal_id"),
-                            title = title,
-                            imageUrl = jpg.getString("image_url"),
-                            siteUrl = "https://anilist.co/search/anime?search=$encodedTitle",
+                            title = titleObj.optString("romaji", ""),
+                            imageUrl = coverObj.optString("medium", ""),
+                            siteUrl = media.optString("siteUrl", ""),
                         ),
                     )
                 }
 
                 _state.update {
                     it.copy(
-                        discoveredMovies = moviesList,
-                        moviesError = null,
+                        discoveredMovies = if (append) it.discoveredMovies + moviesList else moviesList,
+                        moviesPage = page,
+                        moviesHasMore = hasNextPage,
+                        isLoadingMovies = false,
                     )
                 }
             } catch (e: Exception) {
-                _state.update {
-                    it.copy(moviesError = "Failed to load movies")
-                }
+                _state.update { it.copy(isLoadingMovies = false, moviesError = "Failed to fetch movies") }
             }
         }
     }
 
-    fun selectGenre(genreId: Int?) {
-        if (_state.value.selectedGenreId == genreId) return
+    fun selectGenre(genre: String?) {
+        val currentGenre = _state.value.selectedGenre
+        if (currentGenre == genre) return
+
         _state.update {
             it.copy(
-                selectedGenreId = genreId,
+                selectedGenre = genre,
                 discoveredAnime = emptyList(),
-                currentPage = 1,
-                hasMorePages = true,
+                discoveredMovies = emptyList(),
+                animePage = 1,
+                moviesPage = 1,
+                animeHasMore = true,
+                moviesHasMore = true,
             )
         }
         fetchAnime()
+        fetchMovies()
     }
 
-    fun loadMore() {
-        val currentState = _state.value
-        if (currentState.isLoadingMore || !currentState.hasMorePages) return
+    fun loadMoreAnime() {
+        val state = _state.value
+        if (state.isLoadingAnime || !state.animeHasMore) return
         fetchAnime(append = true)
     }
 
-    fun retryDiscover() {
+    fun loadMoreMovies() {
+        val state = _state.value
+        if (state.isLoadingMovies || !state.moviesHasMore) return
+        fetchMovies(append = true)
+    }
+
+    fun retryAnime() {
         fetchAnime()
     }
 

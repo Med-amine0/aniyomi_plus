@@ -124,7 +124,7 @@ data object DashSettingsScreen : Screen {
                             contentDescription = null,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Test Jikan API", fontWeight = FontWeight.Bold)
+                        Text("Test AniList API", fontWeight = FontWeight.Bold)
                     }
                 }
 
