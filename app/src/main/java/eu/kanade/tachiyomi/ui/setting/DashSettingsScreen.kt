@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -115,19 +116,25 @@ class DashSettingsScreen : Screen {
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Clear Log",
+                        text = "Dashboard Debug Logs",
+                        color = Color(0xFF888888),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                    )
+                    Text(
+                        text = "Clear",
                         color = AnimeAccent,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         modifier = Modifier
-                            .padding(8.dp)
                             .background(
                                 color = SurfaceColor,
                                 shape = RoundedCornerShape(4.dp),
                             )
+                            .clickable { screenModel.clearLog() }
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
