@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.model.rememberScreenModel
+import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
@@ -58,7 +59,7 @@ private val SuccessColor = Color(0xFF4CAF50)
 private val ErrorColor = Color(0xFFF44336)
 private val AnimeAccent = Color(0xFF3B82F6)
 
-class DashSettingsScreen : Screen {
+data object DashSettingsScreen : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
