@@ -218,7 +218,7 @@ class TrackerDashboardScreenModel : ScreenModel {
     }
 
     private suspend fun fetchWithRetry(url: String): String? {
-        repeat(3) { attempt ->
+        for (attempt in 0..2) {
             try {
                 delay(350L * (attempt + 1))
 
