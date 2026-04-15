@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.main.dashboard
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -69,6 +70,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
 import tachiyomi.domain.entries.anime.model.AnimeCover
@@ -117,7 +119,6 @@ data object DashboardTab : Tab {
                     DashboardContent(
                         state = state,
                         onAnimeMangaToggle = { screenModel.toggleAnimeMangaView() },
-                        onShowAllToggle = { screenModel.toggleShowAll() },
                         onAnimeClick = { navigator.push(AnimeScreen(it)) },
                         onMangaClick = { navigator.push(MangaScreen(it)) },
                         onGenreSelect = { screenModel.selectGenre(it) },
@@ -126,12 +127,13 @@ data object DashboardTab : Tab {
                             context.startActivity(intent)
                         },
                         onAnimeSearchClick = { anime ->
-                            // TODO: Launch anime search with title
+                            navigator.push(GlobalAnimeSearchScreen(searchQuery = anime.title))
                         },
                         onLoadMoreAnime = { screenModel.loadMoreAnime() },
                         onLoadMoreMovies = { screenModel.loadMoreMovies() },
                         onRetryAnime = { screenModel.retryAnime() },
                         onRetryMovies = { screenModel.retryMovies() },
+                        onRetryGenres = { screenModel.retryGenres() },
                     )
                 }
             }
@@ -143,7 +145,6 @@ data object DashboardTab : Tab {
 private fun DashboardContent(
     state: DashboardState,
     onAnimeMangaToggle: () -> Unit,
-    onShowAllToggle: () -> Unit,
     onAnimeClick: (Long) -> Unit,
     onMangaClick: (Long) -> Unit,
     onGenreSelect: (String?) -> Unit,
@@ -153,6 +154,7 @@ private fun DashboardContent(
     onLoadMoreMovies: () -> Unit,
     onRetryAnime: () -> Unit,
     onRetryMovies: () -> Unit,
+    onRetryGenres: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -189,8 +191,11 @@ private fun DashboardContent(
             item {
                 DiscoverSection(
                     genres = state.genres,
+                    tags = state.tags,
                     selectedGenre = state.selectedGenre,
+                    genresError = state.genresError,
                     onGenreSelect = onGenreSelect,
+                    onRetryGenres = onRetryGenres,
                 )
             }
 
@@ -316,10 +321,12 @@ private fun DashboardContent(
 @Composable
 private fun DiscoverSection(
     genres: List<String>,
+    tags: List<String>,
     selectedGenre: String?,
+    genresError: String?,
     onGenreSelect: (String?) -> Unit,
+    onRetryGenres: () -> Unit,
 ) {
-    val curatedPills = listOf("Trending", "Action", "Adventure", "Comedy", "Isekai")
     var showDropdown by remember { mutableStateOf(false) }
 
     Column {
@@ -348,20 +355,33 @@ private fun DiscoverSection(
                     onDismissRequest = { showDropdown = false },
                     modifier = Modifier.background(SurfaceColor),
                 ) {
-                    genres.forEach { genre ->
+                    if (tags.isEmpty()) {
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = genre,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
+                                    text = if (genresError != null) "Error loading tags" else "No tags available",
+                                    color = Color.Gray,
                                 )
                             },
-                            onClick = {
-                                onGenreSelect(genre)
-                                showDropdown = false
-                            },
+                            onClick = { showDropdown = false },
+                            enabled = false,
                         )
+                    } else {
+                        tags.forEach { tag ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = tag,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                },
+                                onClick = {
+                                    onGenreSelect(tag)
+                                    showDropdown = false
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -369,33 +389,38 @@ private fun DiscoverSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            curatedPills.forEach { pill ->
+        if (genresError != null && genres.isEmpty()) {
+            Text(
+                text = "Failed to load genres. Tap to retry.",
+                color = AnimeAccent,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SurfaceColor)
+                    .clickable { onRetryGenres() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 GenrePillButton(
-                    text = pill,
-                    selected = when {
-                        pill == "Trending" && selectedGenre == null -> true
-                        pill == selectedGenre -> true
-                        else -> false
-                    },
-                    onClick = {
-                        onGenreSelect(if (pill == "Trending") null else pill)
-                    },
+                    text = "Trending",
+                    selected = selectedGenre == null,
+                    onClick = { onGenreSelect(null) },
                 )
-            }
 
-            genres.filter { genre -> genre !in curatedPills }.forEach { genre ->
-                GenrePillButton(
-                    text = genre,
-                    selected = selectedGenre == genre,
-                    onClick = { onGenreSelect(genre) },
-                )
+                genres.forEach { genre ->
+                    GenrePillButton(
+                        text = genre,
+                        selected = selectedGenre == genre,
+                        onClick = { onGenreSelect(genre) },
+                    )
+                }
             }
         }
     }
@@ -599,6 +624,7 @@ private fun DiscoverRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoverCard(
     anime: DiscoveredAnime,

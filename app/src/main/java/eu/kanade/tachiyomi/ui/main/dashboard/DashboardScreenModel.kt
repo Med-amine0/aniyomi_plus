@@ -39,6 +39,7 @@ data class DashboardState(
     val allAnime: List<LibraryAnime> = emptyList(),
     val allManga: List<LibraryManga> = emptyList(),
     val genres: List<String> = emptyList(),
+    val tags: List<String> = emptyList(),
     val selectedGenre: String? = null,
     val discoveredAnime: List<DiscoveredAnime> = emptyList(),
     val discoveredMovies: List<DiscoveredAnime> = emptyList(),
@@ -124,7 +125,7 @@ class DashboardScreenModel : ScreenModel {
     init {
         loadData()
         screenModelScope.launch {
-            fetchGenres()
+            fetchGenresAndTags()
             fetchAnime()
             fetchMovies()
         }
@@ -174,6 +175,10 @@ class DashboardScreenModel : ScreenModel {
                         allManga = manga,
                     )
                 }
+
+                fetchGenresAndTags()
+                fetchAnime()
+                fetchMovies()
             } catch (e: Exception) {
                 _state.update { it.copy(isRefreshing = false) }
             }
@@ -218,9 +223,16 @@ class DashboardScreenModel : ScreenModel {
         }
     }
 
-    private fun fetchGenres() {
+    private fun fetchGenresAndTags() {
         screenModelScope.launch {
-            val query = "query { GenreNames }"
+            val query = """
+                query {
+                    GenreCollection
+                    MediaTagCollection {
+                        name
+                    }
+                }
+            """.trimIndent()
 
             try {
                 val json = fetchGraphQL(query) ?: run {
@@ -228,11 +240,25 @@ class DashboardScreenModel : ScreenModel {
                     return@launch
                 }
 
-                val genreNames = json.optJSONArray("data")?.let { arr ->
-                    (0 until arr.length()).map { arr.getString(it) }
+                val data = json.optJSONObject("data")
+
+                val genreCollection = data?.optJSONArray("GenreCollection")?.let { arr ->
+                    (0 until arr.length()).map { arr.getString(it) }.sorted()
                 } ?: emptyList()
 
-                _state.update { it.copy(genres = genreNames, genresError = null) }
+                val tagCollection = data?.optJSONArray("MediaTagCollection")?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i ->
+                        arr.optJSONObject(i)?.optString("name")
+                    }.sorted()
+                } ?: emptyList()
+
+                _state.update {
+                    it.copy(
+                        genres = genreCollection,
+                        tags = tagCollection,
+                        genresError = null,
+                    )
+                }
             } catch (e: Exception) {
                 _state.update { it.copy(genresError = "Failed to fetch genres") }
             }
@@ -448,5 +474,9 @@ class DashboardScreenModel : ScreenModel {
 
     fun retryMovies() {
         fetchMovies()
+    }
+
+    fun retryGenres() {
+        fetchGenresAndTags()
     }
 }

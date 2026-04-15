@@ -82,13 +82,20 @@ class DashSettingsScreenModel : ScreenModel {
 
             val results = mutableListOf<ApiTestResult>()
 
-            // Test Genre Names Query
-            val genresQuery = "query { GenreNames }"
-            val genresResult = testGraphQL(
-                name = "Genre Names",
-                query = genresQuery,
+            // Test Genre Collection + Media Tag Collection
+            val metadataQuery = """
+                query {
+                    GenreCollection
+                    MediaTagCollection {
+                        name
+                    }
+                }
+            """.trimIndent()
+            val metadataResult = testGraphQL(
+                name = "Genres & Tags Metadata",
+                query = metadataQuery,
             )
-            results.add(genresResult)
+            results.add(metadataResult)
 
             delay(500)
 
@@ -221,22 +228,34 @@ class DashSettingsScreenModel : ScreenModel {
                         message = "Error: ${errors.getJSONObject(0).optString("message", "Unknown error")}"
                     }
                 } else if (json.has("data")) {
-                    val data = json.get("data")
-                    message = when {
-                        data is JSONObject && data.has("Page") -> {
-                            val page = data.getJSONObject("Page")
-                            val media = page.optJSONArray("media")
-                            if (media != null) {
-                                "Got ${media.length()} items"
-                            } else {
-                                "Got data object"
+                    val data = json.get("data") as? JSONObject
+                    if (data != null) {
+                        when {
+                            data.has("Page") -> {
+                                val page = data.getJSONObject("Page")
+                                val media = page.optJSONArray("media")
+                                if (media != null) {
+                                    "Got ${media.length()} items"
+                                } else {
+                                    "Got data object"
+                                }
                             }
+                            data.has("GenreCollection") || data.has("MediaTagCollection") -> {
+                                val genres = data.optJSONArray("GenreCollection")
+                                val tags = data.optJSONArray("MediaTagCollection")
+                                val parts = mutableListOf<String>()
+                                if (genres != null) {
+                                    parts.add("${genres.length()} genres")
+                                }
+                                if (tags != null) {
+                                    parts.add("${tags.length()} tags")
+                                }
+                                parts.joinToString(", ")
+                            }
+                            else -> "Got data"
                         }
-                        data is JSONObject && data.has("GenreNames") -> {
-                            val genres = data.getJSONArray("GenreNames")
-                            "Got ${genres.length()} genres"
-                        }
-                        else -> "Got data"
+                    } else {
+                        message = "Got data"
                     }
                 }
 
