@@ -4,8 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +28,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -47,7 +46,6 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.presentation.components.AppBar
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -71,10 +69,27 @@ data object DashSettingsScreen : Screen {
 
         Scaffold(
             topBar = {
-                AppBar(
-                    title = stringResource(AYMR.strings.label_dach),
-                    navigateUp = { navigator.pop() },
-                    scrollBehavior = null,
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(AYMR.strings.label_dach),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
+                    navigationIcon = {
+                        Box(
+                            modifier = Modifier
+                                .clickable { navigator.pop() }
+                                .padding(12.dp)
+                        ) {
+                            Text("←", color = Color.White, fontSize = 20.sp)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = SurfaceColor,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                    ),
                 )
             },
             containerColor = BackgroundColor,
