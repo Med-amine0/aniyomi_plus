@@ -41,14 +41,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import cafe.adriel.voyager.core.model.screenModel
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import eu.kanade.tachiyomi.ui.setting.DashSettingsScreenModel
@@ -62,12 +59,12 @@ private val SuccessColor = Color(0xFF4CAF50)
 private val ErrorColor = Color(0xFFF44336)
 private val AnimeAccent = Color(0xFF3B82F6)
 
-class DashSettingsScreenContent : Screen {
+data object DashSettingsScreenContent : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val screenModel = screenModel { DashSettingsScreenModel() }
+        val screenModel = rememberScreenModel { DashSettingsScreenModel() }
         val state by screenModel.state.collectAsState()
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
