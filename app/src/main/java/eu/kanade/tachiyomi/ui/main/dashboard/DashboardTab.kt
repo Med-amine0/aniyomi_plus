@@ -33,8 +33,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -44,9 +42,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,17 +79,7 @@ private val MangaAccent = Color(0xFFF97316)
 private val BackgroundColor = Color(0xFF1A1A1A)
 private val SurfaceColor = Color(0xFF121212)
 
-private data class GenrePill(val id: Int, val name: String)
-
-private val defaultGenres = listOf(
-    GenrePill(0, "Trending"),
-    GenrePill(2, "Adventure"),
-    GenrePill(9, "Ecchi"),
-    GenrePill(4, "Comedy"),
-    GenrePill(1, "Action"),
-)
-
-data object TrackerDashboardTab : Tab {
+data object DashboardTab : Tab {
 
     override val options: TabOptions
         @Composable
@@ -107,7 +92,7 @@ data object TrackerDashboardTab : Tab {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val screenModel = rememberScreenModel { TrackerDashboardScreenModel() }
+        val screenModel = rememberScreenModel { DashboardScreenModel() }
         val state by screenModel.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
@@ -136,6 +121,7 @@ data object TrackerDashboardTab : Tab {
                         },
                         onLoadMore = { screenModel.loadMore() },
                         onRetry = { screenModel.retryDiscover() },
+                        onRetryMovies = { screenModel.retryMovies() },
                         allGenres = state.genres,
                     )
                 }
@@ -146,15 +132,16 @@ data object TrackerDashboardTab : Tab {
 
 @Composable
 private fun DashboardContent(
-    state: TrackerDashboardState,
+    state: DashboardState,
     onAnimeMangaToggle: () -> Unit,
     onShowAllToggle: () -> Unit,
     onAnimeClick: (Long) -> Unit,
     onMangaClick: (Long) -> Unit,
-    onGenreSelect: (Int) -> Unit,
+    onGenreSelect: (Int?) -> Unit,
     onAnimeSiteClick: (DiscoveredAnime) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
+    onRetryMovies: () -> Unit,
     allGenres: List<Genre>,
 ) {
     LazyColumn(
@@ -211,6 +198,24 @@ private fun DashboardContent(
                     onLoadMore = onLoadMore,
                     onRetry = onRetry,
                     hasMore = state.hasMorePages,
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                SectionTitle("MOVIES")
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                DiscoverRow(
+                    items = state.discoveredMovies,
+                    isLoading = false,
+                    error = state.moviesError,
+                    onSiteClick = onAnimeSiteClick,
+                    onLoadMore = {},
+                    onRetry = onRetryMovies,
+                    hasMore = false,
                 )
             }
 
@@ -390,81 +395,29 @@ private fun EmptySection() {
 
 @Composable
 private fun GenreSection(
-    selectedGenreId: Int,
-    onGenreSelect: (Int) -> Unit,
+    selectedGenreId: Int?,
+    onGenreSelect: (Int?) -> Unit,
     allGenres: List<Genre>,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            defaultGenres.forEach { genre ->
-                GenrePillButton(
-                    text = genre.name,
-                    selected = selectedGenreId == genre.id,
-                    onClick = { onGenreSelect(genre.id) },
-                )
-            }
-        }
+        GenrePillButton(
+            text = "Trending",
+            selected = selectedGenreId == null,
+            onClick = { onGenreSelect(null) },
+        )
 
-        var expanded by remember { mutableStateOf(false) }
-        val otherGenres = allGenres.filter { g -> defaultGenres.none { it.id == g.id } }
-
-        Box {
-            Text(
-                text = "Tags ▾",
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SurfaceColor)
-                    .clickable { expanded = true }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                color = Color(0xFF888888),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+        allGenres.forEach { genre ->
+            GenrePillButton(
+                text = genre.name,
+                selected = selectedGenreId == genre.id,
+                onClick = { onGenreSelect(genre.id) },
             )
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(SurfaceColor),
-            ) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            "Tags ▾",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    },
-                    onClick = {
-                        expanded = false
-                    },
-                )
-                HorizontalDivider(color = Color(0xFF333333))
-                otherGenres.take(20).forEach { genre ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                genre.name,
-                                color = if (selectedGenreId == genre.id) AnimeAccent else Color.White,
-                                fontWeight = if (selectedGenreId == genre.id) FontWeight.Bold else FontWeight.Normal,
-                            )
-                        },
-                        onClick = {
-                            onGenreSelect(genre.id)
-                            expanded = false
-                        },
-                    )
-                }
-            }
         }
     }
 }

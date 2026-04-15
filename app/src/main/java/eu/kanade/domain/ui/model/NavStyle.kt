@@ -14,7 +14,7 @@ import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.history.HistoriesTab
 import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.tachiyomi.ui.library.manga.MangaLibraryTab
-import eu.kanade.tachiyomi.ui.main.dashboard.TrackerDashboardTab
+import eu.kanade.tachiyomi.ui.main.dashboard.DashboardTab
 import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.updates.UpdatesTab
 import tachiyomi.i18n.aniyomi.AYMR
@@ -41,7 +41,7 @@ enum class NavStyle(
     val tabs: List<Tab>
         get() {
             return mutableListOf(
-                TrackerDashboardTab,
+                DashboardTab,
                 AnimeLibraryTab,
                 MangaLibraryTab,
                 UpdatesTab,

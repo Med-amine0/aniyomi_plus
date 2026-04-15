@@ -33,7 +33,7 @@ data class DiscoveredAnime(
 )
 
 @Immutable
-data class TrackerDashboardState(
+data class DashboardState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val animeView: Boolean = true,
@@ -41,12 +41,14 @@ data class TrackerDashboardState(
     val allAnime: List<LibraryAnime> = emptyList(),
     val allManga: List<LibraryManga> = emptyList(),
     val genres: List<Genre> = emptyList(),
-    val selectedGenreId: Int = 0,
+    val selectedGenreId: Int? = null,
     val discoveredAnime: List<DiscoveredAnime> = emptyList(),
+    val discoveredMovies: List<DiscoveredAnime> = emptyList(),
     val currentPage: Int = 1,
     val isLoadingMore: Boolean = false,
     val hasMorePages: Boolean = true,
     val discoverError: String? = null,
+    val moviesError: String? = null,
 ) {
     val recentAnime: List<LibraryAnime>
         get() = allAnime
@@ -105,19 +107,20 @@ data class TrackerDashboardState(
     }
 }
 
-class TrackerDashboardScreenModel : ScreenModel {
+class DashboardScreenModel : ScreenModel {
 
     private val getLibraryAnime: GetLibraryAnime = Injekt.get()
     private val getLibraryManga: GetLibraryManga = Injekt.get()
 
-    private val _state = MutableStateFlow(TrackerDashboardState())
-    val state: StateFlow<TrackerDashboardState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(DashboardState())
+    val state: StateFlow<DashboardState> = _state.asStateFlow()
 
     init {
         loadData()
         screenModelScope.launch {
             fetchGenres()
             fetchAnime()
+            fetchMovies()
         }
     }
 
@@ -214,7 +217,6 @@ class TrackerDashboardScreenModel : ScreenModel {
 
             _state.update { it.copy(genres = genreList) }
         } catch (e: Exception) {
-            // Silently fail
         }
     }
 
@@ -235,10 +237,10 @@ class TrackerDashboardScreenModel : ScreenModel {
                 val page = if (append) currentState.currentPage + 1 else 1
                 val genreId = currentState.selectedGenreId
 
-                val url = if (genreId == 0) {
+                val url = if (genreId == null) {
                     "https://api.jikan.moe/v4/top/anime?page=$page&limit=12"
                 } else {
-                    "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12&order_by=score&sort=desc"
+                    "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12"
                 }
 
                 val body = fetchUrl(url)
@@ -291,7 +293,54 @@ class TrackerDashboardScreenModel : ScreenModel {
         }
     }
 
-    fun selectGenre(genreId: Int) {
+    private fun fetchMovies() {
+        screenModelScope.launch {
+            try {
+                delay(350)
+
+                val body = fetchUrl("https://api.jikan.moe/v4/top/anime?type=movie&limit=12")
+
+                if (body == null) {
+                    _state.update { it.copy(moviesError = "Failed to load movies") }
+                    return@launch
+                }
+
+                val json = org.json.JSONObject(body)
+                val dataArray = json.getJSONArray("data")
+
+                val moviesList = mutableListOf<DiscoveredAnime>()
+                for (i in 0 until dataArray.length()) {
+                    val animeObj = dataArray.getJSONObject(i)
+                    val images = animeObj.getJSONObject("images")
+                    val jpg = images.getJSONObject("jpg")
+                    val title = animeObj.getString("title")
+                    val encodedTitle = URLEncoder.encode(title, "UTF-8")
+
+                    moviesList.add(
+                        DiscoveredAnime(
+                            malId = animeObj.getLong("mal_id"),
+                            title = title,
+                            imageUrl = jpg.getString("image_url"),
+                            siteUrl = "https://anilist.co/search/anime?search=$encodedTitle",
+                        ),
+                    )
+                }
+
+                _state.update {
+                    it.copy(
+                        discoveredMovies = moviesList,
+                        moviesError = null,
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(moviesError = "Failed to load movies")
+                }
+            }
+        }
+    }
+
+    fun selectGenre(genreId: Int?) {
         if (_state.value.selectedGenreId == genreId) return
         _state.update {
             it.copy(
@@ -312,5 +361,9 @@ class TrackerDashboardScreenModel : ScreenModel {
 
     fun retryDiscover() {
         fetchAnime()
+    }
+
+    fun retryMovies() {
+        fetchMovies()
     }
 }
