@@ -189,6 +189,11 @@ private fun DashboardContent(
             }
 
             item {
+                Spacer(modifier = Modifier.height(12.dp))
+                SectionTitle("ANIME")
+            }
+
+            item {
                 Spacer(modifier = Modifier.height(8.dp))
                 DiscoverRow(
                     items = state.discoveredAnime,

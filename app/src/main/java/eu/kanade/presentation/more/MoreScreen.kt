@@ -47,6 +47,7 @@ fun MoreScreen(
     onClickPlayerSettings: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAbout: () -> Unit,
+    onClickDashSettings: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -170,6 +171,13 @@ fun MoreScreen(
                     title = stringResource(MR.strings.label_help),
                     icon = Icons.AutoMirrored.Outlined.HelpOutline,
                     onPreferenceClick = { uriHandler.openUri(Constants.URL_HELP) },
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(AYMR.strings.label_dach),
+                    icon = Icons.Outlined.Settings,
+                    onPreferenceClick = onClickDashSettings,
                 )
             }
         }
