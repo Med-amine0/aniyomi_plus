@@ -4,8 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,10 +28,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -43,14 +41,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.model.rememberScreenModel
-import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import cafe.adriel.voyager.core.model.screenModel
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
 import eu.kanade.tachiyomi.ui.setting.DashSettingsScreenModel
-import eu.kanade.tachiyomi.ui.setting.DashSettingsScreen
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -61,14 +62,19 @@ private val SuccessColor = Color(0xFF4CAF50)
 private val ErrorColor = Color(0xFFF44336)
 private val AnimeAccent = Color(0xFF3B82F6)
 
-data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
+class DashSettingsScreenContent : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val screenModel = rememberScreenModel { DashSettingsScreenModel() }
+        val screenModel = screenModel { DashSettingsScreenModel() }
         val state by screenModel.state.collectAsState()
         val context = LocalContext.current
+        val navigator = LocalNavigator.currentOrThrow
+
+        BackHandler {
+            navigator.pop()
+        }
 
         Scaffold(
             topBar = {
@@ -80,7 +86,7 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { context.findActivity()?.onBackPressedDispatcher?.onBackPressed() }) {
+                        IconButton(onClick = { navigator.pop() }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
@@ -102,7 +108,6 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
                     .padding(paddingValues)
                     .padding(16.dp),
             ) {
-                // Test Button
                 Button(
                     onClick = { screenModel.testAllApis() },
                     enabled = !state.isTesting,
@@ -133,7 +138,6 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Clear Log Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -143,13 +147,18 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
                         color = AnimeAccent,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(8.dp),
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .background(
+                                color = SurfaceColor,
+                                shape = RoundedCornerShape(4.dp),
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Log Area
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -173,7 +182,6 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
                             lineHeight = 16.sp,
                         )
 
-                        // Show individual results if available
                         state.results.forEach { result ->
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
@@ -215,7 +223,6 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Copy Log Button
                 Button(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -239,14 +246,5 @@ data object DashSettingsScreenContent : eu.kanade.presentation.util.Screen {
                 }
             }
         }
-    }
-
-    private fun Context.findActivity(): android.app.Activity? {
-        var context = this
-        while (context is android.content.ContextWrapper) {
-            if (context is android.app.Activity) return context
-            context = context.baseContext
-        }
-        return null
     }
 }
