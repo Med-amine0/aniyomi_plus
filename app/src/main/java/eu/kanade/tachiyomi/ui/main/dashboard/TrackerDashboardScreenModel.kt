@@ -217,6 +217,35 @@ class TrackerDashboardScreenModel : ScreenModel {
         }
     }
 
+    private suspend fun fetchWithRetry(url: String): String? {
+        repeat(3) { attempt ->
+            try {
+                delay(350L * (attempt + 1))
+
+                val request = Request.Builder()
+                    .url(url)
+                    .build()
+
+                val response = withContext(Dispatchers.IO) {
+                    jikanClient.newCall(request).execute()
+                }
+
+                if (response.code == 429) {
+                    continue
+                }
+
+                if (!response.isSuccessful) {
+                    continue
+                }
+
+                return response.body?.string()
+            } catch (e: Exception) {
+                // Network error, retry
+            }
+        }
+        return null
+    }
+
     private fun fetchAnime(append: Boolean = false) {
         val currentState = _state.value
         if (currentState.isLoadingMore && !append) return
@@ -229,8 +258,6 @@ class TrackerDashboardScreenModel : ScreenModel {
             }
 
             try {
-                delay(350)
-
                 val page = if (append) currentState.currentPage + 1 else 1
                 val genreId = currentState.selectedGenreId
 
@@ -240,27 +267,10 @@ class TrackerDashboardScreenModel : ScreenModel {
                     "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12&order_by=score&sort=desc"
                 }
 
-                val request = Request.Builder()
-                    .url(url)
-                    .build()
+                val body = fetchWithRetry(url)
 
-                val response = withContext(Dispatchers.IO) {
-                    jikanClient.newCall(request).execute()
-                }
-
-                if (response.code == 429) {
-                    _state.update { it.copy(isLoadingMore = false, discoverError = "Rate limited, tap to retry") }
-                    return@launch
-                }
-
-                if (!response.isSuccessful) {
-                    _state.update { it.copy(isLoadingMore = false, discoverError = "Failed to load") }
-                    return@launch
-                }
-
-                val body = response.body?.string()
                 if (body == null) {
-                    _state.update { it.copy(isLoadingMore = false, discoverError = "Empty response") }
+                    _state.update { it.copy(isLoadingMore = false, discoverError = "Tap to retry") }
                     return@launch
                 }
 
@@ -300,7 +310,7 @@ class TrackerDashboardScreenModel : ScreenModel {
                 _state.update {
                     it.copy(
                         isLoadingMore = false,
-                        discoverError = "Failed to load anime",
+                        discoverError = "Tap to retry",
                     )
                 }
             }
