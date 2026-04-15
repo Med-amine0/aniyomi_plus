@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.main.dashboard
 
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
@@ -243,17 +244,24 @@ class DashboardScreenModel : ScreenModel {
                     "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12"
                 }
 
+                Log.d("Dashboard", "Fetching anime from: $url")
+
                 val body = fetchUrl(url)
 
                 if (body == null) {
+                    Log.e("Dashboard", "Failed to fetch anime - body is null")
                     _state.update { it.copy(isLoadingMore = false, discoverError = "Tap to retry") }
                     return@launch
                 }
+
+                Log.d("Dashboard", "Got response body length: ${body.length}")
 
                 val json = org.json.JSONObject(body)
                 val dataArray = json.getJSONArray("data")
                 val pagination = json.getJSONObject("pagination")
                 val hasMore = pagination.getBoolean("has_next_page")
+
+                Log.d("Dashboard", "Parsing $dataArray.length items")
 
                 val animeList = mutableListOf<DiscoveredAnime>()
                 for (i in 0 until dataArray.length()) {
@@ -273,16 +281,21 @@ class DashboardScreenModel : ScreenModel {
                     )
                 }
 
+                Log.d("Dashboard", "Created ${animeList.size} DiscoveredAnime items")
+
                 _state.update {
-                    it.copy(
+                    val newState = it.copy(
                         discoveredAnime = if (append) it.discoveredAnime + animeList else animeList,
                         currentPage = page,
                         hasMorePages = hasMore,
                         isLoadingMore = false,
                         discoverError = null,
                     )
+                    Log.d("Dashboard", "State updated - discoveredAnime size: ${newState.discoveredAnime.size}")
+                    newState
                 }
             } catch (e: Exception) {
+                Log.e("Dashboard", "Exception fetching anime", e)
                 _state.update {
                     it.copy(
                         isLoadingMore = false,
