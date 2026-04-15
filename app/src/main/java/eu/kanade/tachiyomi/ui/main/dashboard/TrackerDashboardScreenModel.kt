@@ -3,7 +3,6 @@ package eu.kanade.tachiyomi.ui.main.dashboard
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import tachiyomi.domain.entries.anime.interactor.GetLibraryAnime
 import tachiyomi.domain.entries.manga.interactor.GetLibraryManga
 import tachiyomi.domain.library.anime.LibraryAnime
@@ -19,6 +20,7 @@ import tachiyomi.domain.library.manga.LibraryManga
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
 @Immutable
 data class Genre(val id: Int, val name: String)
@@ -108,7 +110,18 @@ class TrackerDashboardScreenModel : ScreenModel {
 
     private val getLibraryAnime: GetLibraryAnime = Injekt.get()
     private val getLibraryManga: GetLibraryManga = Injekt.get()
-    private val network: NetworkHelper = Injekt.get()
+
+    private val jikanClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            chain.proceed(
+                chain.request().newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Android 14)")
+                    .build()
+            )
+        }
+        .build()
 
     private val _state = MutableStateFlow(TrackerDashboardState())
     val state: StateFlow<TrackerDashboardState> = _state.asStateFlow()
@@ -173,13 +186,12 @@ class TrackerDashboardScreenModel : ScreenModel {
 
     private suspend fun fetchGenres() {
         try {
+            val request = Request.Builder()
+                .url("https://api.jikan.moe/v4/genres/anime")
+                .build()
+
             val response = withContext(Dispatchers.IO) {
-                network.client.newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.jikan.moe/v4/genres/anime")
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                        .build(),
-                ).execute()
+                jikanClient.newCall(request).execute()
             }
 
             if (!response.isSuccessful) return
@@ -217,7 +229,6 @@ class TrackerDashboardScreenModel : ScreenModel {
             }
 
             try {
-                // Respect rate limit
                 delay(350)
 
                 val page = if (append) currentState.currentPage + 1 else 1
@@ -229,13 +240,12 @@ class TrackerDashboardScreenModel : ScreenModel {
                     "https://api.jikan.moe/v4/anime?genres=$genreId&page=$page&limit=12&order_by=score&sort=desc"
                 }
 
+                val request = Request.Builder()
+                    .url(url)
+                    .build()
+
                 val response = withContext(Dispatchers.IO) {
-                    network.client.newCall(
-                        okhttp3.Request.Builder()
-                            .url(url)
-                            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                            .build(),
-                    ).execute()
+                    jikanClient.newCall(request).execute()
                 }
 
                 if (response.code == 429) {
