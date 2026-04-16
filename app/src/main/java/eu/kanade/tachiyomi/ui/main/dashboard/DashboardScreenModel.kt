@@ -331,7 +331,7 @@ class DashboardScreenModel : ScreenModel {
                     animeList.add(
                         DiscoveredAnime(
                             title = titleObj.optString("romaji", ""),
-                            imageUrl = coverObj.optString("large", ""),
+                            imageUrl = coverObj.optString("large", "").ifEmpty { coverObj.optString("medium", "") },
                             siteUrl = media.optString("siteUrl", ""),
                         ),
                     )
@@ -417,7 +417,7 @@ class DashboardScreenModel : ScreenModel {
                     moviesList.add(
                         DiscoveredAnime(
                             title = titleObj.optString("romaji", ""),
-                            imageUrl = coverObj.optString("large", ""),
+                            imageUrl = coverObj.optString("large", "").ifEmpty { coverObj.optString("medium", "") },
                             siteUrl = media.optString("siteUrl", ""),
                         ),
                     )
