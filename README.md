@@ -1,4 +1,4 @@
-# Aniyomi Plus (Nested Categories Fork)
+# Aniyomi Plus (Nested Categories + Dashboard Fork)
 
 <div align="center">
 
@@ -6,9 +6,9 @@
     <img src="./.github/assets/logo.png" alt="Aniyomi logo" title="Aniyomi logo" width="80"/>
 </a>
 
-# Aniyomi Nested Categories Fork
+# Aniyomi Plus Fork
 
-### A fork of [Aniyomi](https://github.com/aniyomiorg/aniyomi) with support for nested/subcategories
+### A fork of [Aniyomi](https://github.com/aniyomiorg/aniyomi) with Dashboard, Nested Categories, and AniList API integration
 
 [![Discord server](https://img.shields.io/discord/841701076242530374.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/F32UjdJZrR)
 [![License: Apache-2.0](https://img.shields.io/github/license/aniyomiorg/aniyomi?labelColor=27303D&color=818cf8)](/LICENSE)
@@ -17,21 +17,119 @@
 
 ---
 
+## What's New in This Fork
+
+### Dashboard Tab (Dach)
+A new dashboard featuring **AniList API** integration for anime discovery:
+
+- **Genre Pills** - Dynamically fetched from AniList, sorted alphabetically
+- **Tags Dropdown** - Full list of AniList tags for detailed filtering
+- **Anime & Movies Rows** - Horizontal scrolling discovery with search functionality
+- **Search Icon** - Click to search anime directly in-app via AniList
+
+### Nested Categories
+Organize your library with **hierarchical categories**:
+
+- Unlimited nesting depth for anime and manga
+- Long-press to move items between nested categories
+- Intuitive navigation through category levels
+
+### Configurable Columns
+Adjust library display with slider controls:
+
+- Anime library: customizable column count (default: 3)
+- Manga library: customizable column count (default: 3)
+
+### Settings Dashboard
+Debug panel in **More > Dash** for API testing:
+
+- Test AniList GraphQL queries
+- View response logs
+- Copy logs to clipboard
+
+---
+
 ## About This Fork
 
-This fork adds **nested/hierarchical categories** support to Aniyomi, allowing users to:
+This fork builds upon **Aniyomi** with:
 
-- Create subcategories under existing categories
-- Organize their library with nested category hierarchies
-- Navigate through category levels in the library view
-- Move items between nested categories
+- Nested/hierarchical categories support
+- Dashboard with AniList API discovery
+- Configurable library columns
+- Developer tools for API debugging
 
-### Key Features
+---
 
-- **Unlimited nesting depth** - Create as many subcategory levels as needed
-- **Intuitive navigation** - Browse through category hierarchies easily
-- **Backward compatible** - Existing categories work without modification
-- **Migration support** - Backups are restored correctly with nested structure
+## AniList GraphQL API Reference
+
+This fork uses the [AniList GraphQL API](https://github.com/AniList/docs/tree/master/source/api-docs) for anime discovery.
+
+### Base Endpoint
+```
+https://graphql.anilist.co
+```
+
+### Key Queries Used
+
+**Fetch Genre/Tag Metadata:**
+```graphql
+query {
+  GenreCollection
+  MediaTagCollection {
+    name
+  }
+}
+```
+
+**Fetch Anime (Trending):**
+```graphql
+query($page: Int) {
+  Page(page: $page, perPage: 12) {
+    pageInfo { hasNextPage }
+    media(type: ANIME, sort: TRENDING_DESC) {
+      title { romaji }
+      coverImage { medium }
+      siteUrl
+    }
+  }
+}
+```
+
+**Fetch Anime by Genre:**
+```graphql
+query($page: Int, $genre: String) {
+  Page(page: $page, perPage: 12) {
+    pageInfo { hasNextPage }
+    media(type: ANIME, genre: $genre, sort: SCORE_DESC) {
+      title { romaji }
+      coverImage { medium }
+      siteUrl
+    }
+  }
+}
+```
+
+**Fetch Movies:**
+```graphql
+query($page: Int) {
+  Page(page: $page, perPage: 12) {
+    pageInfo { hasNextPage }
+    media(type: ANIME, format: MOVIE, sort: TRENDING_DESC) {
+      title { romaji }
+      coverImage { medium }
+      siteUrl
+    }
+  }
+}
+```
+
+### API Rate Limits
+- Standard rate limit: 90 requests per minute
+- Note: Movies and genre filters may occasionally return server errors (5xx)
+
+### Documentation
+- [AniList API Docs](https://github.com/AniList/docs/tree/master/source/api-docs)
+- [GraphQL Schema](https://github.com/AniList/docs/blob/master/source/api-docs/graphql/schema.md)
 
 ---
 
@@ -56,7 +154,7 @@ This fork is based on **Aniyomi** - a full-featured manga and anime reader for A
 ### Quick Build (Debug APK)
 
 ```bash
-# Build debug APK for arm64-v8a (recommended for low-RAM systems)
+# Build debug APK
 ./gradlew assembleDebug
 
 # The APK will be at: app/build/outputs/apk/debug/
@@ -97,24 +195,39 @@ aniyomi_plus/
 
 ### Database Schema
 
-Added `parentId` column to categories table to support hierarchy:
+Added `parentId` column to categories table for hierarchy support:
 - `parentId = null` → Top-level category
 - `parentId = categoryId` → Subcategory of that category
 
 ### Key Modified Files
 
-| File | Purpose |
-|------|---------|
-| `Category.kt` | Added `parentId` field |
-| `CategoryUpdate.kt` | Added `parentId` update support |
-| `AnimeCategoryRepository.kt` | Added `parentId` parameter |
-| `MangaCategoryRepository.kt` | Added `parentId` parameter |
-| `AnimeCategoriesRestorer.kt` | Restores categories with hierarchy |
-| `MangaCategoriesRestorer.kt` | Restores categories with hierarchy |
+| Component | Purpose |
+|----------|---------|
+| `DashboardScreenModel.kt` | AniList GraphQL API integration |
+| `DashboardTab.kt` | Dashboard UI with genre pills and discovery |
+| `DashSettingsScreen.kt` | API testing debug panel |
+| `Category.kt` | Added `parentId` field for nested categories |
 | `AnimeCategoryScreen.kt` | UI for managing anime categories |
 | `MangaCategoryScreen.kt` | UI for managing manga categories |
-| `AnimeLibraryContent.kt` | Library view with category navigation |
-| `MangaLibraryContent.kt` | Library view with category navigation |
+
+---
+
+## Credits
+
+### Development
+- **OpenCode Big Pickle** - Primary developer of this fork
+
+### Base Projects
+- **[Aniyomi](https://github.com/aniyomiorg/aniyomi)** - Base manga/anime reader
+- **[Mihon](https://github.com/mihonapp/mihon)** - Forked from (Tachiyomi fork)
+- **[Tachiyomi](https://github.com/tachiyomiorg/tachiyomi)** - Original manga reader
+
+### APIs
+- **[AniList](https://github.com/AniList/docs)** - GraphQL API for anime discovery
+
+### Libraries & Dependencies
+
+This project uses many open-source libraries. See `build.gradle.kts` files for full dependencies.
 
 ---
 
@@ -133,18 +246,6 @@ Contributions are welcome! Please:
 - Test your changes thoroughly
 - Update documentation as needed
 - Be respectful in communications
-
----
-
-## References & Credits
-
-- **[Aniyomi](https://github.com/aniyomiorg/aniyomi)** - Base project
-- **[Mihon](https://github.com/mihonapp/mihon)** - Forked from (Tachiyomi fork)
-- **[Tachiyomi](https://github.com/tachiyomiorg/tachiyomi)** - Original manga reader
-
-### Libraries & Dependencies
-
-This project uses many open-source libraries. See `build.gradle.kts` files for full dependencies.
 
 ---
 
@@ -185,4 +286,3 @@ For general Aniyomi support, visit:
 - [Aniyomi Discord](https://discord.gg/F32UjdJZrR)
 - [Aniyomi Website](https://aniyomi.org)
 - [Aniyomi GitHub](https://github.com/aniyomiorg/aniyomi)
-
