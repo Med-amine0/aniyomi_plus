@@ -288,7 +288,7 @@ class DashboardScreenModel : ScreenModel {
                                 pageInfo { hasNextPage }
                                 media(type: ANIME, sort: TRENDING_DESC) {
                                     title { romaji }
-                                    coverImage { medium }
+                                    coverImage { large }
                                     siteUrl
                                 }
                             }
@@ -302,7 +302,7 @@ class DashboardScreenModel : ScreenModel {
                                 pageInfo { hasNextPage }
                                 media(type: ANIME, genre: ${'$'}genre, sort: SCORE_DESC) {
                                     title { romaji }
-                                    coverImage { medium }
+                                    coverImage { large }
                                     siteUrl
                                 }
                             }
@@ -331,7 +331,7 @@ class DashboardScreenModel : ScreenModel {
                     animeList.add(
                         DiscoveredAnime(
                             title = titleObj.optString("romaji", ""),
-                            imageUrl = coverObj.optString("medium", ""),
+                            imageUrl = coverObj.optString("large", ""),
                             siteUrl = media.optString("siteUrl", ""),
                         ),
                     )
@@ -417,7 +417,7 @@ class DashboardScreenModel : ScreenModel {
                     moviesList.add(
                         DiscoveredAnime(
                             title = titleObj.optString("romaji", ""),
-                            imageUrl = coverObj.optString("medium", ""),
+                            imageUrl = coverObj.optString("large", ""),
                             siteUrl = media.optString("siteUrl", ""),
                         ),
                     )
