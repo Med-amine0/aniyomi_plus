@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
 import androidx.compose.material.icons.outlined.Delete
@@ -298,6 +299,7 @@ fun LibraryBottomActionMenu(
     onDeleteClicked: () -> Unit,
     isManga: Boolean,
     modifier: Modifier = Modifier,
+    onCreateCategoryClicked: (() -> Unit)? = null,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -314,11 +316,11 @@ fun LibraryBottomActionMenu(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false) }
+            val confirm = remember { mutableStateListOf(false, false, false, false, false, false) }
             var resetJob: Job? = remember { null }
             val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                (0..<5).forEach { i -> confirm[i] = i == toConfirmIndex }
+                (0..<6).forEach { i -> confirm[i] = i == toConfirmIndex }
                 resetJob?.cancel()
                 resetJob = scope.launch {
                     delay(1.seconds)
@@ -381,6 +383,15 @@ fun LibraryBottomActionMenu(
                     onLongClick = { onLongClickItem(4) },
                     onClick = onDeleteClicked,
                 )
+                if (onCreateCategoryClicked != null) {
+                    Button(
+                        title = stringResource(MR.strings.action_create_category),
+                        icon = Icons.Outlined.Add,
+                        toConfirm = confirm[5],
+                        onLongClick = { onLongClickItem(5) },
+                        onClick = onCreateCategoryClicked,
+                    )
+                }
             }
         }
     }

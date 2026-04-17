@@ -53,11 +53,13 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.category.anime.interactor.CreateAnimeCategoryWithName
 import tachiyomi.domain.category.anime.interactor.GetVisibleAnimeCategories
 import tachiyomi.domain.category.anime.interactor.SetAnimeCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.anime.interactor.GetLibraryAnime
 import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.entries.anime.repository.AnimeRepository
 import tachiyomi.domain.entries.anime.model.AnimeUpdate
 import tachiyomi.domain.entries.applyFilter
 import tachiyomi.domain.history.anime.interactor.GetNextEpisodes
@@ -90,6 +92,8 @@ class AnimeLibraryScreenModel(
     private val setSeenStatus: SetSeenStatus = Injekt.get(),
     private val updateAnime: UpdateAnime = Injekt.get(),
     private val setAnimeCategories: SetAnimeCategories = Injekt.get(),
+    private val createAnimeCategoryWithName: CreateAnimeCategoryWithName = Injekt.get(),
+    private val animeRepository: AnimeRepository = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: AnimeCoverCache = Injekt.get(),
@@ -731,6 +735,35 @@ class AnimeLibraryScreenModel(
     fun openDeleteAnimeDialog() {
         val nimeList = state.value.selection.map { it.anime }
         mutableState.update { it.copy(dialog = Dialog.DeleteAnime(nimeList)) }
+    }
+
+    fun createCategoryFromSelection() {
+        screenModelScope.launchIO {
+            val selectedAnime = state.value.selection
+            if (selectedAnime.isEmpty()) return@launchIO
+
+            val categoryName = selectedAnime.first().anime.title
+            val firstSelected = selectedAnime.firstOrNull() ?: return@launchIO
+
+            val parentCategoryId = if (firstSelected.category != 0L) firstSelected.category else null
+
+            val result = createAnimeCategoryWithName.await(categoryName, parentCategoryId)
+
+            if (result is CreateAnimeCategoryWithName.Result.Success) {
+                val categories = animeRepository.getCategories(firstSelected.anime.id)
+                val newCategoryId = categories
+                    .filter { it.parentId == parentCategoryId }
+                    .maxByOrNull { it.order }
+                    ?.id
+                    ?: return@launchIO
+
+                selectedAnime.forEach { libraryAnime ->
+                    setAnimeCategories.await(libraryAnime.anime.id, listOf(newCategoryId))
+                }
+
+                clearSelection()
+            }
+        }
     }
 
     fun closeDialog() {

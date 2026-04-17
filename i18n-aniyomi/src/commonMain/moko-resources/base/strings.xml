@@ -598,4 +598,5 @@
     <string name="trending">Trending</string>
     <string name="no_anime_found">No anime found</string>
     <string name="failed_to_load_anime">Failed to load anime</string>
+    <string name="action_create_category">Create category</string>
 </resources>

@@ -51,12 +51,14 @@ import tachiyomi.core.common.util.lang.compareToWithCollator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.category.manga.interactor.CreateMangaCategoryWithName
 import tachiyomi.domain.category.manga.interactor.GetVisibleMangaCategories
 import tachiyomi.domain.category.manga.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.applyFilter
 import tachiyomi.domain.entries.manga.interactor.GetLibraryManga
 import tachiyomi.domain.entries.manga.model.Manga
+import tachiyomi.domain.entries.manga.repository.MangaRepository
 import tachiyomi.domain.entries.manga.model.MangaUpdate
 import tachiyomi.domain.history.manga.interactor.GetNextChapters
 import tachiyomi.domain.items.chapter.interactor.GetChaptersByMangaId
@@ -88,6 +90,8 @@ class MangaLibraryScreenModel(
     private val setReadStatus: SetReadStatus = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
+    private val createMangaCategoryWithName: CreateMangaCategoryWithName = Injekt.get(),
+    private val mangaRepository: MangaRepository = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: MangaCoverCache = Injekt.get(),
@@ -716,6 +720,35 @@ class MangaLibraryScreenModel(
     fun openDeleteMangaDialog() {
         val mangaList = state.value.selection.map { it.manga }
         mutableState.update { it.copy(dialog = Dialog.DeleteManga(mangaList)) }
+    }
+
+    fun createCategoryFromSelection() {
+        screenModelScope.launchIO {
+            val selectedManga = state.value.selection
+            if (selectedManga.isEmpty()) return@launchIO
+
+            val categoryName = selectedManga.first().manga.title
+            val firstSelected = selectedManga.firstOrNull() ?: return@launchIO
+
+            val parentCategoryId = if (firstSelected.category != 0L) firstSelected.category else null
+
+            val result = createMangaCategoryWithName.await(categoryName, parentCategoryId)
+
+            if (result is CreateMangaCategoryWithName.Result.Success) {
+                val categories = mangaRepository.getCategories(firstSelected.manga.id)
+                val newCategoryId = categories
+                    .filter { it.parentId == parentCategoryId }
+                    .maxByOrNull { it.order }
+                    ?.id
+                    ?: return@launchIO
+
+                selectedManga.forEach { libraryManga ->
+                    setMangaCategories.await(libraryManga.manga.id, listOf(newCategoryId))
+                }
+
+                clearSelection()
+            }
+        }
     }
 
     fun closeDialog() {

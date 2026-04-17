@@ -185,6 +185,7 @@ data object MangaLibraryTab : Tab {
                     onDownloadClicked = screenModel::runDownloadActionSelection
                         .takeIf { state.selection.fastAll { !it.manga.isLocal() } },
                     onDeleteClicked = screenModel::openDeleteMangaDialog,
+                    onCreateCategoryClicked = screenModel::createCategoryFromSelection,
                     isManga = true,
                 )
             },
