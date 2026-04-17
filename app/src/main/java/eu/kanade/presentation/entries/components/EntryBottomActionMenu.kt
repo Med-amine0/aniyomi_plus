@@ -385,7 +385,7 @@ fun LibraryBottomActionMenu(
                 )
                 if (onCreateCategoryClicked != null) {
                     Button(
-                        title = stringResource(MR.strings.action_create_category),
+                        title = stringResource(AYMR.strings.action_create_category),
                         icon = Icons.Outlined.Add,
                         toConfirm = confirm[5],
                         onLongClick = { onLongClickItem(5) },
