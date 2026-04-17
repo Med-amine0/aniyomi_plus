@@ -54,11 +54,11 @@ import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.category.manga.interactor.CreateMangaCategoryWithName
 import tachiyomi.domain.category.manga.interactor.GetVisibleMangaCategories
 import tachiyomi.domain.category.manga.interactor.SetMangaCategories
+import tachiyomi.domain.category.manga.repository.MangaCategoryRepository
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.applyFilter
 import tachiyomi.domain.entries.manga.interactor.GetLibraryManga
 import tachiyomi.domain.entries.manga.model.Manga
-import tachiyomi.domain.entries.manga.repository.MangaRepository
 import tachiyomi.domain.entries.manga.model.MangaUpdate
 import tachiyomi.domain.history.manga.interactor.GetNextChapters
 import tachiyomi.domain.items.chapter.interactor.GetChaptersByMangaId
@@ -91,7 +91,7 @@ class MangaLibraryScreenModel(
     private val updateManga: UpdateManga = Injekt.get(),
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val createMangaCategoryWithName: CreateMangaCategoryWithName = Injekt.get(),
-    private val mangaRepository: MangaRepository = Injekt.get(),
+    private val mangaCategoryRepository: MangaCategoryRepository = Injekt.get(),
     private val preferences: BasePreferences = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val coverCache: MangaCoverCache = Injekt.get(),
@@ -735,9 +735,13 @@ class MangaLibraryScreenModel(
             val result = createMangaCategoryWithName.await(categoryName, parentCategoryId)
 
             if (result is CreateMangaCategoryWithName.Result.Success) {
-                val categories = mangaRepository.getCategories(firstSelected.manga.id)
+                val categories = if (parentCategoryId != null) {
+                    mangaCategoryRepository.getChildMangaCategories(parentCategoryId)
+                } else {
+                    mangaCategoryRepository.getRootMangaCategories()
+                }
                 val newCategoryId = categories
-                    .filter { it.parentId == parentCategoryId }
+                    .filter { it.name == categoryName }
                     .maxByOrNull { it.order }
                     ?.id
                     ?: return@launchIO
