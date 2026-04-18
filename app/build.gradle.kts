@@ -309,6 +309,9 @@ dependencies {
     implementation(aniyomilibs.seeker)
     // true type parser
     implementation(aniyomilibs.truetypeparser)
+
+    // Torrentserver
+    implementation(libs.torrentserver)
 }
 
 androidComponents {
