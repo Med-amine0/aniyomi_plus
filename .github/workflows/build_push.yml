@@ -67,9 +67,20 @@ jobs:
             - Anime & Movies discovery
             - Nested categories support
             - Configurable library columns
+            - **Torrent Streaming (TorrServer)** - Stream anime directly from magnet links and .torrent files
+
+            ### Torrent Streaming
+            Built-in torrent streaming support powered by TorrServer:
+            - Stream anime directly from magnet links and .torrent files
+            - Embedded TorrServer (no external server needed)
+            - Configurable port and custom trackers in Player Settings
+            - Auto-starts when playing torrent content
 
             ### API
             Uses [AniList GraphQL API](https://github.com/AniList/docs) for anime discovery.
+
+            ### Credits
+            - [Animetail](https://github.com/nerdXD/Animetail) - TorrServer implementation reference
 
             ### Download
             Download the debug APK from the Artifacts section.
