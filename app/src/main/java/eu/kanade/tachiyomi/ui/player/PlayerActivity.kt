@@ -76,6 +76,11 @@ import eu.kanade.tachiyomi.ui.player.settings.GesturePreferences
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
 import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils
 import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils.Companion.getStringRes
+import eu.kanade.tachiyomi.data.torrentServer.service.TorrentServerService
+import eu.kanade.tachiyomi.torrentServer.TorrentServerApi
+import eu.kanade.tachiyomi.torrentServer.TorrentServerUtils
+import eu.kanade.tachiyomi.torrentServer.TorrentServerPreferences
+import tachiyomi.core.common.preference.PreferenceStore
 import eu.kanade.tachiyomi.util.system.powerManager
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
@@ -305,6 +310,9 @@ class PlayerActivity : BaseActivity() {
         MPVLib.removeLogObserver(playerObserver)
         MPVLib.removeObserver(playerObserver)
         player.destroy()
+
+        // Stop torrent service
+        TorrentServerService.stop()
 
         super.onDestroy()
     }
@@ -1052,6 +1060,9 @@ class PlayerActivity : BaseActivity() {
         if (player.isExiting) return
         if (video == null) return
 
+        // Lazy initialization for torrent API
+        initializeTorrentApi()
+
         setHttpOptions(video)
 
         if (viewModel.isLoadingEpisode.value) {
@@ -1071,19 +1082,73 @@ class PlayerActivity : BaseActivity() {
             }
         }
 
-        val videoOptions = video.mpvArgs.joinToString(",") { (option, value) ->
-            "$option=\"$value\""
+        // Check if video URL is a torrent
+        if (video.videoUrl.startsWith(TorrentServerUtils.hostUrl) ||
+            video.videoUrl.startsWith("magnet") ||
+            video.videoUrl.endsWith(".torrent")
+        ) {
+            lifecycleScope.launchIO {
+                TorrentServerService.start()
+                TorrentServerService.wait(10)
+                torrentLinkHandler(video.videoUrl, video.videoTitle)
+            }
+        } else {
+            val videoOptions = video.mpvArgs.joinToString(",") { (option, value) ->
+                "$option=\"$value\""
+            }
+
+            MPVLib.command(
+                arrayOf(
+                    "loadfile",
+                    parseVideoUrl(video.videoUrl),
+                    "replace",
+                    "0",
+                    videoOptions,
+                ),
+            )
+        }
+    }
+
+    private fun initializeTorrentApi() {
+        try {
+            val networkHelperField = TorrentServerApi::class.java.getDeclaredField("networkHelper")
+            if (networkHelperField.get(TorrentServerApi) == null) {
+                val networkHelper = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
+                val preferenceStore = Injekt.get<PreferenceStore>()
+                TorrentServerApi.init(networkHelper)
+                TorrentServerUtils.init(TorrentServerPreferences(preferenceStore))
+            }
+        } catch (e: Exception) {
+            // Already initialized or error
+        }
+    }
+
+    private fun torrentLinkHandler(videoUrl: String, quality: String) {
+        var index = 0
+
+        // Check if link is from local source
+        if (videoUrl.startsWith("content://")) {
+            val videoInputStream = applicationContext.contentResolver.openInputStream(Uri.parse(videoUrl))
+            val torrent = TorrentServerApi.uploadTorrent(videoInputStream!!, quality, "", "", false)
+            val torrentUrl = TorrentServerUtils.getTorrentPlayLink(torrent, 0)
+            MPVLib.command(arrayOf("loadfile", torrentUrl))
+            return
         }
 
-        MPVLib.command(
-            arrayOf(
-                "loadfile",
-                parseVideoUrl(video.videoUrl),
-                "replace",
-                "0",
-                videoOptions,
-            ),
-        )
+        // Check if link is from magnet, in that check if index is present
+        if (videoUrl.startsWith("magnet")) {
+            if (videoUrl.contains("index=")) {
+                index = try {
+                    videoUrl.substringAfter("index=").toInt()
+                } catch (e: NumberFormatException) {
+                    0
+                }
+            }
+        }
+
+        val currentTorrent = TorrentServerApi.addTorrent(videoUrl, quality, "", "", false)
+        val videoTorrentUrl = TorrentServerUtils.getTorrentPlayLink(currentTorrent, index)
+        MPVLib.command(arrayOf("loadfile", videoTorrentUrl))
     }
 
     /**
