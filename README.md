@@ -232,6 +232,7 @@ Added `parentId` column to categories table for hierarchy support:
 
 ### Torrent Implementation
 - **[Animetail](https://github.com/nerdXD/Animetail)** - TorrServer implementation reference
+- [Torrent Streaming](https://github.com/Med-amine0/aniyomi_plus#torrent-streaming-torrserver) - Stream anime directly from magnet links and .torrent files
 
 ### APIs
 - **[AniList](https://github.com/AniList/docs)** - GraphQL API for anime discovery
