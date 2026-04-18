@@ -121,6 +121,7 @@ class PlayerActivity : BaseActivity() {
     val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
     private var mediaSession: MediaSession? = null
+    private var torrentApiInitialized = false
     private val gesturePreferences: GesturePreferences by lazy { viewModel.gesturePreferences }
     private val playerPreferences: PlayerPreferences by lazy { viewModel.playerPreferences }
     private val audioPreferences: AudioPreferences = Injekt.get()
@@ -1088,9 +1089,16 @@ class PlayerActivity : BaseActivity() {
             video.videoUrl.endsWith(".torrent")
         ) {
             lifecycleScope.launchIO {
-                TorrentServerService.start()
-                TorrentServerService.wait(10)
-                torrentLinkHandler(video.videoUrl, video.videoTitle)
+                try {
+                    TorrentServerService.start()
+                    TorrentServerService.wait(10)
+                    torrentLinkHandler(video.videoUrl, video.videoTitle)
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR) { "Failed to load torrent: ${e.message}" }
+                    withUIContext {
+                        toast("Failed to load torrent: ${e.message}")
+                    }
+                }
             }
         } else {
             val videoOptions = video.mpvArgs.joinToString(",") { (option, value) ->
@@ -1110,16 +1118,17 @@ class PlayerActivity : BaseActivity() {
     }
 
     private fun initializeTorrentApi() {
+        if (torrentApiInitialized) return
         try {
-            val networkHelperField = TorrentServerApi::class.java.getDeclaredField("networkHelper")
-            if (networkHelperField.get(TorrentServerApi) == null) {
-                val networkHelper = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
-                val preferenceStore = Injekt.get<PreferenceStore>()
-                TorrentServerApi.init(networkHelper)
-                TorrentServerUtils.init(TorrentServerPreferences(preferenceStore))
-            }
+            val networkHelper = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
+            val preferenceStore = Injekt.get<PreferenceStore>()
+            TorrentServerApi.init(networkHelper)
+            TorrentServerUtils.init(TorrentServerPreferences(preferenceStore))
+            torrentApiInitialized = true
+            logcat(LogPriority.DEBUG) { "TorrentServerApi initialized successfully" }
         } catch (e: Exception) {
-            // Already initialized or error
+            logcat(LogPriority.ERROR) { "Failed to initialize TorrentServerApi: ${e.message}" }
+            toast("Failed to initialize torrent support: ${e.message}")
         }
     }
 
