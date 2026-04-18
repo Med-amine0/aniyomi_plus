@@ -47,6 +47,14 @@ Debug panel in **More > Dash** for API testing:
 - View response logs
 - Copy logs to clipboard
 
+### Torrent Streaming (TorrServer)
+Built-in torrent streaming support powered by TorrServer:
+
+- Stream anime directly from magnet links and .torrent files
+- Embedded TorrServer (no external server needed)
+- Configurable port and custom trackers in Player Settings
+- Auto-starts when playing torrent content
+
 ---
 
 ## About This Fork
@@ -221,6 +229,9 @@ Added `parentId` column to categories table for hierarchy support:
 - **[Aniyomi](https://github.com/aniyomiorg/aniyomi)** - Base manga/anime reader
 - **[Mihon](https://github.com/mihonapp/mihon)** - Forked from (Tachiyomi fork)
 - **[Tachiyomi](https://github.com/tachiyomiorg/tachiyomi)** - Original manga reader
+
+### Torrent Implementation
+- **[Animetail](https://github.com/nerdXD/Animetail)** - TorrServer implementation reference
 
 ### APIs
 - **[AniList](https://github.com/AniList/docs)** - GraphQL API for anime discovery
