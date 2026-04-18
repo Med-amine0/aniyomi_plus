@@ -599,4 +599,6 @@
     <string name="no_anime_found">No anime found</string>
     <string name="failed_to_load_anime">Failed to load anime</string>
     <string name="action_create_category">Create category</string>
+    <string name="pref_category_torrent">Torrent Streaming</string>
+    <string name="pref_torrent_port">TorrServer Port</string>
 </resources>
