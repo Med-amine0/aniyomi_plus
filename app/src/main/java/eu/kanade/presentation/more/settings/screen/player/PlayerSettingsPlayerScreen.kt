@@ -76,6 +76,7 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
             getDisplayGroup(playerPreferences = playerPreferences),
             getIntroSkipGroup(playerPreferences = playerPreferences),
             if (deviceSupportsPip) getPipGroup(playerPreferences = playerPreferences) else null,
+            getTorrentGroup(),
             getExternalPlayerGroup(
                 playerPreferences = playerPreferences,
                 basePreferences = basePreferences,
@@ -290,7 +291,6 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
                     title = stringResource(AYMR.strings.pref_pip_replace_with_previous),
                     enabled = isPipEnabled,
                 ),
-                getTorrentGroup(),
             ),
         )
     }
