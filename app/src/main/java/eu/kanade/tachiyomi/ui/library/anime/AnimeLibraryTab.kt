@@ -208,7 +208,13 @@ data object AnimeLibraryTab : Tab {
                         currentPage = { screenModel.activeCategoryIndex },
                         hasActiveFilters = state.hasActiveFilters,
                         showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
-                        onChangeCurrentPage = { screenModel.activeCategoryIndex = it },
+                        onChangeCurrentPage = { newPage ->
+                            val currentCategory = state.categories.getOrNull(screenModel.activeCategoryIndex)
+                            if (currentCategory != null) {
+                                screenModel.pushCategory(currentCategory.id)
+                            }
+                            screenModel.activeCategoryIndex = newPage
+                        },
                         onAnimeClicked = { navigator.push(AnimeScreen(it)) },
                         onContinueWatchingClicked = { it: LibraryAnime ->
                             scope.launchIO {
@@ -285,10 +291,29 @@ data object AnimeLibraryTab : Tab {
             null -> {}
         }
 
-        BackHandler(enabled = state.selectionMode || state.searchQuery != null) {
+        BackHandler(enabled = state.selectionMode || state.searchQuery != null || !screenModel.isAtRoot()) {
             when {
                 state.selectionMode -> screenModel.clearSelection()
                 state.searchQuery != null -> screenModel.search(null)
+                !screenModel.isAtRoot() -> {
+                    val previousCategory = screenModel.popCategory()
+                    if (previousCategory != null) {
+                        val categoryIndex = state.categories.indexOfFirst { it.id == previousCategory }
+                        if (categoryIndex >= 0) {
+                            screenModel.activeCategoryIndex = categoryIndex
+                        }
+                    }
+                }
+            }
+        }
+
+        LaunchedEffect(screenModel.isAtRoot()) {
+            if (screenModel.isAtRoot() && !state.selectionMode && state.searchQuery == null) {
+                if (screenModel.checkDoubleBackPress()) {
+                    (context as? MainActivity)?.finish()
+                } else {
+                    snackbarHostState.showSnackbar("Click back again to exit")
+                }
             }
         }
 

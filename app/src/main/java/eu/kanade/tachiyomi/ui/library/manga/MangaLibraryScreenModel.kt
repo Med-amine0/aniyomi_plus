@@ -105,6 +105,35 @@ class MangaLibraryScreenModel(
         screenModelScope,
     )
 
+    private val categoryStack = mutableListOf<Long>()
+    private var lastBackPressTime = 0L
+
+    fun pushCategory(categoryId: Long) {
+        categoryStack.add(categoryId)
+    }
+
+    fun popCategory(): Long? {
+        return if (categoryStack.isNotEmpty()) {
+            categoryStack.removeLast()
+        } else null
+    }
+
+    fun getCurrentCategory(): Long? {
+        return categoryStack.lastOrNull()
+    }
+
+    fun isAtRoot(): Boolean = categoryStack.isEmpty()
+
+    fun checkDoubleBackPress(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        return if (currentTime - lastBackPressTime < 1000) {
+            true
+        } else {
+            lastBackPressTime = currentTime
+            false
+        }
+    }
+
     init {
         screenModelScope.launchIO {
             combine(

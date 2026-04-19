@@ -122,7 +122,8 @@ class PlayerActivity : BaseActivity() {
 
     private var mediaSession: MediaSession? = null
     private var torrentApiInitialized = false
-    private val gesturePreferences: GesturePreferences by lazy { viewModel.gesturePreferences }
+    private var torrentServiceStarted = false
+    private val gesturePreferences by lazy { viewModel.gesturePreferences }
     private val playerPreferences: PlayerPreferences by lazy { viewModel.playerPreferences }
     private val audioPreferences: AudioPreferences = Injekt.get()
     private val advancedPlayerPreferences: AdvancedPlayerPreferences = Injekt.get()
@@ -313,7 +314,10 @@ class PlayerActivity : BaseActivity() {
         player.destroy()
 
         // Stop torrent service
-        TorrentServerService.stop()
+        if (torrentServiceStarted) {
+            TorrentServerService.stop()
+            torrentServiceStarted = false
+        }
 
         super.onDestroy()
     }
@@ -1090,8 +1094,10 @@ class PlayerActivity : BaseActivity() {
         ) {
             lifecycleScope.launchIO {
                 try {
+                    withUIContext { toast("Initializing Torrent Server...") }
                     TorrentServerService.start()
                     TorrentServerService.wait(10)
+                    torrentServiceStarted = true
                     torrentLinkHandler(video.videoUrl, video.videoTitle)
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR) { "Failed to load torrent: ${e.message}" }
