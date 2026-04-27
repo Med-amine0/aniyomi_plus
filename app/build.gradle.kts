@@ -56,9 +56,7 @@ android {
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = true)}\"")
 
-            if (signingConfigs.findByName("release") != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
 
         val commonMatchingFallbacks = listOf(release.name)
@@ -87,15 +85,11 @@ android {
     }
 
     signingConfigs {
-        val keystoreFile = System.getenv("KEYSTORE_FILE")?.let { file(it) }
-            ?: project.file("dummy.keystore").takeIf { it.exists() }
-        if (keystoreFile != null && keystoreFile.exists()) {
-            create("release") {
-                storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-                keyAlias = System.getenv("KEY_ALIAS") ?: ""
-                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
-            }
+        create("release") {
+            storeFile = file(System.getenv("KEYSTORE_FILE") ?: "dummy.keystore")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
         }
     }
 
