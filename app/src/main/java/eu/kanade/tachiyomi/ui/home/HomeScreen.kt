@@ -151,8 +151,8 @@ object HomeScreen : Screen() {
                 }
             }
             BackHandler(
-                enabled = tabNavigator.current !is MangaLibraryTab &&
-                    tabNavigator.current !is AnimeLibraryTab,
+                enabled = (tabNavigator.current == moreTab || tabNavigator.current != defaultTab) &&
+                    (tabNavigator.current != AnimeLibraryTab || defaultTab != moreTab),
                 onBack = goToStartScreen,
             )
 

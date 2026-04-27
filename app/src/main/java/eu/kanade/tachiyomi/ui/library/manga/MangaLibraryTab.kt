@@ -325,6 +325,9 @@ data object MangaLibraryTab : Tab {
                         }
                     }
                 }
+                else -> {
+                    // At root level - do nothing, let HomeScreen handle going to dashboard
+                }
             }
         }
 
