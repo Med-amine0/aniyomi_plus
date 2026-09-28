@@ -8,13 +8,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import aniyomi.core.common.torrent.ProxyMode
-import aniyomi.core.common.torrent.TorrentPreferences
 import aniyomi.core.common.torrent.TorrentServerApi
 import aniyomi.core.common.torrent.TorrentServerUtils
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.notification.Notifications
-import eu.kanade.tachiyomi.network.NetworkPreferences
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import kotlinx.coroutines.CoroutineScope
@@ -27,15 +24,12 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import xyz.secozzi.torrserver.TorrServer
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration.Companion.seconds
 
 class TorrentServerService : Service() {
     private val serviceScope = CoroutineScope(EmptyCoroutineContext)
     private val applicationContext = Injekt.get<Application>()
-    private val networkPreferences = Injekt.get<NetworkPreferences>()
-    private val torrentPreferences = Injekt.get<TorrentPreferences>()
     private val torrentServerUtils = Injekt.get<TorrentServerUtils>()
     private val api = Injekt.get<TorrentServerApi>()
 
@@ -60,32 +54,21 @@ class TorrentServerService : Service() {
         return START_NOT_STICKY
     }
 
+    @Suppress("MagicNumber")
     private fun startServer() {
         serviceScope.launch {
             if (api.echo() == "") {
-                if (networkPreferences.verboseLogging().get()) {
-                    TorrServer.registerLogCallback()
-                }
-
-                val proxyMode = torrentPreferences.torrServerProxyMode().get()
-                val port = TorrServer.startServer(
-                    port = torrentPreferences.torrServerPort().get(),
-                    path = filesDir.absolutePath,
-                    proxyMode = proxyMode.value,
-                    proxyUrl = if (proxyMode == ProxyMode.None) "" else torrentPreferences.torrServerProxyUrl().get(),
-                )
-                if (port != -1) {
-                    api.setPort(port)
-                    wait(10)
-                    torrentServerUtils.setTrackersList()
-                }
+                torrServer.TorrServer.startTorrentServer(filesDir.absolutePath)
+                wait(10)
+                torrentServerUtils.setTrackersList()
             }
         }
     }
 
     private fun stopServer() {
         serviceScope.launch {
-            TorrServer.stopServer()
+            torrServer.TorrServer.stopTorrentServer()
+            api.shutdown()
             applicationContext.cancelNotification(Notifications.ID_TORRENT_SERVER)
             stopSelf()
         }
@@ -149,7 +132,11 @@ class TorrentServerService : Service() {
                     Intent(applicationContext, TorrentServerService::class.java).apply {
                         action = ACTION_START
                     }
-                applicationContext.startService(intent)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    applicationContext.startForegroundService(intent)
+                } else {
+                    applicationContext.startService(intent)
+                }
                 wait(10)
             } catch (e: Exception) {
                 logcat(LogPriority.DEBUG, e) { "Failed to start torrent service" }

@@ -1094,12 +1094,19 @@ class PlayerActivity : BaseActivity() {
             (
                 video.videoUrl.startsWith(torrentServerApi.hostUrl) ||
                     video.videoUrl.startsWith("magnet") ||
-                    video.videoUrl.endsWith("torrent")
+                    video.videoUrl.endsWith(".torrent")
                 )
         ) {
             launchIO {
-                TorrentServerService.start()
-                torrentLinkHandler(video.videoUrl, video.videoTitle, videoOptions)
+                try {
+                    launchUI { toast("Initializing Torrent Server...") }
+                    TorrentServerService.start()
+                    TorrentServerService.wait(10)
+                    torrentLinkHandler(video.videoUrl, video.videoTitle)
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR) { "Failed to load torrent: ${e.message}" }
+                    launchUI { toast("Failed to load torrent: ${e.message}") }
+                }
             }
         } else {
             launchIO {
@@ -1150,7 +1157,7 @@ class PlayerActivity : BaseActivity() {
         finish()
     }
 
-    private suspend fun torrentLinkHandler(videoUrl: String, title: String, videoOptions: String) {
+    private suspend fun torrentLinkHandler(videoUrl: String, title: String) {
         var index = 0
 
         // check if link is from localSource
@@ -1159,15 +1166,7 @@ class PlayerActivity : BaseActivity() {
             val torrent = torrentServerApi.uploadTorrent(videoInputStream!!, title, false)
             val torrentUrl = torrentServerUtils.getTorrentPlayLink(torrent, 0)
 
-            MPVLib.command(
-                arrayOf(
-                    "loadfile",
-                    torrentUrl,
-                    "replace",
-                    "0",
-                    videoOptions,
-                ),
-            )
+            MPVLib.command(arrayOf("loadfile", torrentUrl))
             return
         }
 
@@ -1175,7 +1174,7 @@ class PlayerActivity : BaseActivity() {
         if (videoUrl.startsWith("magnet")) {
             if (videoUrl.contains("index=")) {
                 index = try {
-                    videoUrl.substringAfter("index=").substringBefore("&").toInt()
+                    videoUrl.substringAfter("index=").toInt()
                 } catch (_: NumberFormatException) {
                     0
                 }
@@ -1185,15 +1184,7 @@ class PlayerActivity : BaseActivity() {
         val currentTorrent = torrentServerApi.addTorrent(videoUrl, title, "", "", false)
         val videoTorrentUrl = torrentServerUtils.getTorrentPlayLink(currentTorrent, index)
 
-        MPVLib.command(
-            arrayOf(
-                "loadfile",
-                videoTorrentUrl,
-                "replace",
-                "0",
-                videoOptions,
-            ),
-        )
+        MPVLib.command(arrayOf("loadfile", videoTorrentUrl))
     }
 
     fun parseVideoUrl(videoUrl: String?): String? {

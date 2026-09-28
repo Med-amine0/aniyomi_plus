@@ -235,7 +235,7 @@ class AppModule(val app: Application) : InjektModule {
 
         addSingletonFactory { ExternalIntents() }
 
-        addSingletonFactory { TorrentServerApi(get(), get()) }
+        addSingletonFactory { TorrentServerApi(get(), get(), get()) }
         addSingletonFactory { TorrentServerUtils(get(), get()) }
 
         // Asynchronously init expensive components for a faster cold start

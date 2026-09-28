@@ -317,8 +317,8 @@ dependencies {
     // FFmpeg-kit
     implementation(aniyomilibs.ffmpeg.kit)
     implementation(aniyomilibs.arthenica.smartexceptions)
-    // TorrServer
-    implementation(aniyomilibs.torrserver)
+    // Torrentserver
+    implementation(libs.torrentserver)
     // seeker seek bar
     implementation(aniyomilibs.seeker)
     // true type parser

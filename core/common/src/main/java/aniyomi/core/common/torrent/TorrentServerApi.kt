@@ -14,23 +14,43 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import tachiyomi.core.common.util.system.logcat
 import java.io.InputStream
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 class TorrentServerApi(
     private val network: NetworkHelper,
     private val json: Json,
+    private val preferences: TorrentPreferences,
 ) {
-    val hostUrl
-        get() = "http://127.0.0.1:$port"
+    val hostUrl: String
+        get() = "http://${getLocalIpAddress()}:${preferences.torrServerPort().get()}"
 
-    @Volatile
-    private var port: Int = 0
-
-    fun setPort(value: Int) {
-        port = value
+    private fun getLocalIpAddress(): String {
+        try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val intf = interfaces.nextElement()
+                val addresses = intf.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val addr = addresses.nextElement()
+                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
+                        return addr.hostAddress ?: "127.0.0.1"
+                    }
+                }
+            }
+        } catch (ex: Exception) {
+            logcat(LogPriority.DEBUG, ex) { "Error getting local IP address" }
+        }
+        return "127.0.0.1"
     }
 
-    fun getPort(): Int {
-        return port
+    suspend fun shutdown(): String {
+        return try {
+            network.client.newCall(GET("$hostUrl/shutdown")).awaitSuccess().body.string()
+        } catch (e: Exception) {
+            logcat(LogPriority.DEBUG, e) { "Error sending shutdown" }
+            ""
+        }
     }
 
     suspend fun echo(): String {
