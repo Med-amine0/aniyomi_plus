@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
-import eu.kanade.tachiyomi.torrentServer.TorrentServerPreferences
 import eu.kanade.tachiyomi.ui.player.JUST_PLAYER
 import eu.kanade.tachiyomi.ui.player.MPV_KT
 import eu.kanade.tachiyomi.ui.player.MPV_KT_PREVIEW
@@ -76,7 +75,6 @@ object PlayerSettingsPlayerScreen : SearchableSettings {
             getDisplayGroup(playerPreferences = playerPreferences),
             getIntroSkipGroup(playerPreferences = playerPreferences),
             if (deviceSupportsPip) getPipGroup(playerPreferences = playerPreferences) else null,
-            getTorrentGroup(),
             getExternalPlayerGroup(
                 playerPreferences = playerPreferences,
                 basePreferences = basePreferences,
@@ -347,18 +345,3 @@ val externalPlayers = listOf(
     WEB_VIDEO_CASTER,
 )
 
-@Composable
-private fun getTorrentGroup(): Preference.PreferenceGroup {
-    val torrentPreferences = remember { Injekt.get<TorrentServerPreferences>() }
-
-    return Preference.PreferenceGroup(
-        title = stringResource(AYMR.strings.pref_category_torrent),
-        preferenceItems = persistentListOf(
-            Preference.PreferenceItem.EditTextPreference(
-                preference = torrentPreferences.port(),
-                title = stringResource(AYMR.strings.pref_torrent_port),
-                subtitle = "Default: 8090",
-            ),
-        ),
-    )
-}
