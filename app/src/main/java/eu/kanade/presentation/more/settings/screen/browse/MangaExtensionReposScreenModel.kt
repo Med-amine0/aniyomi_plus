@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
 import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStore
 import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStoreRepository
 import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -44,7 +45,7 @@ class MangaExtensionReposScreenModel(
                     mutableState.update { current ->
                         RepoScreenState.Success(
                             repos = repos.toImmutableSet(),
-                            stores = (current as? RepoScreenState.Success)?.stores ?: emptySet(),
+                            stores = (current as? RepoScreenState.Success)?.stores ?: persistentSetOf(),
                         )
                     }
                 }
@@ -55,7 +56,7 @@ class MangaExtensionReposScreenModel(
                 .collectLatest { stores ->
                     mutableState.update { current ->
                         RepoScreenState.Success(
-                            repos = (current as? RepoScreenState.Success)?.repos ?: emptySet(),
+                            repos = (current as? RepoScreenState.Success)?.repos ?: persistentSetOf(),
                             stores = stores.toImmutableSet(),
                         )
                     }
@@ -179,7 +180,7 @@ sealed class RepoScreenState {
     @Immutable
     data class Success(
         val repos: ImmutableSet<ExtensionRepo>,
-        val stores: ImmutableSet<MangaExtensionStore> = emptySet(),
+        val stores: ImmutableSet<MangaExtensionStore> = persistentSetOf(),
         val oldRepos: ImmutableSet<String>? = null,
         val dialog: RepoDialog? = null,
     ) : RepoScreenState() {
