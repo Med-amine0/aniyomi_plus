@@ -4,7 +4,6 @@ import eu.kanade.tachiyomi.extension.manga.model.MangaExtension
 import eu.kanade.tachiyomi.extension.manga.store.model.NetworkLegacyMangaExtension
 import eu.kanade.tachiyomi.extension.manga.store.model.NetworkLegacyMangaExtensionRepo
 import eu.kanade.tachiyomi.extension.manga.store.model.NetworkMangaExtensionStore
-import eu.kanade.tachiyomi.extension.manga.store.model.toAvailableExtension
 import eu.kanade.tachiyomi.extension.manga.store.model.toAvailableExtensions
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
