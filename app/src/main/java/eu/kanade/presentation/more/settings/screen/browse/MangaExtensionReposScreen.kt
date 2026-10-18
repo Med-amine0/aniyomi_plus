@@ -48,6 +48,10 @@ class MangaExtensionReposScreen(
             onClickCreate = { screenModel.showDialog(RepoDialog.Create) },
             onOpenWebsite = { context.openInBrowser(it.website) },
             onClickDelete = { screenModel.showDialog(RepoDialog.Delete(it)) },
+            onOpenStoreWebsite = {
+                it.contact.website.takeIf(String::isNotBlank)?.let(context::openInBrowser)
+            },
+            onClickDeleteStore = { screenModel.showDialog(RepoDialog.Delete(it, isStore = true)) },
             onClickRefresh = { screenModel.refreshRepos() },
             navigateUp = navigator::pop,
         )
@@ -64,7 +68,13 @@ class MangaExtensionReposScreen(
             is RepoDialog.Delete -> {
                 ExtensionRepoDeleteDialog(
                     onDismissRequest = screenModel::dismissDialog,
-                    onDelete = { screenModel.deleteRepo(dialog.repo) },
+                    onDelete = {
+                        if (dialog.isStore) {
+                            screenModel.deleteStore(dialog.repo)
+                        } else {
+                            screenModel.deleteRepo(dialog.repo)
+                        }
+                    },
                     repo = dialog.repo,
                 )
             }
