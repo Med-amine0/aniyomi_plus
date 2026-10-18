@@ -45,7 +45,9 @@ class MigratorTest {
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(1, migrations.captured.size)
-        verify { migrationCompletedListener() }
+        // The completion listener is launched on `Migrator.scope` (Dispatchers.IO), which Dispatchers.setMain
+        // cannot influence, so it may be invoked after execute.await() returns. Wait for it rather than race it.
+        verify(timeout = 5_000) { migrationCompletedListener() }
     }
 
     @Test
@@ -86,7 +88,7 @@ class MigratorTest {
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(2, migrations.captured.size)
-        verify { migrationCompletedListener() }
+        verify(timeout = 5_000) { migrationCompletedListener() }
     }
 
     @Test
@@ -114,7 +116,7 @@ class MigratorTest {
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(10, migrations.captured.size)
-        verify { migrationCompletedListener() }
+        verify(timeout = 5_000) { migrationCompletedListener() }
     }
 
     @Test
@@ -135,7 +137,7 @@ class MigratorTest {
 
         verify { migrationJobFactory.create(capture(migrations)) }
         assertEquals(2, migrations.captured.size)
-        verify { migrationCompletedListener() }
+        verify(timeout = 5_000) { migrationCompletedListener() }
     }
 
     companion object {

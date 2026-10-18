@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStore
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import kotlinx.collections.immutable.ImmutableSet
 import mihon.domain.extensionrepo.model.ExtensionRepo
@@ -31,10 +32,13 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun MangaExtensionReposContent(
     repos: ImmutableSet<ExtensionRepo>,
+    stores: ImmutableSet<MangaExtensionStore>,
     lazyListState: LazyListState,
     paddingValues: PaddingValues,
     onOpenWebsite: (ExtensionRepo) -> Unit,
     onClickDelete: (String) -> Unit,
+    onOpenStoreWebsite: (MangaExtensionStore) -> Unit,
+    onClickDeleteStore: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -50,6 +54,18 @@ fun MangaExtensionReposContent(
                     repo = it,
                     onOpenWebsite = { onOpenWebsite(it) },
                     onDelete = { onClickDelete(it.baseUrl) },
+                )
+            }
+        }
+
+        // Extension stores (new format) are listed after the legacy repos.
+        stores.forEach {
+            item {
+                ExtensionStoreListItem(
+                    modifier = Modifier.animateItem(),
+                    store = it,
+                    onOpenWebsite = { onOpenStoreWebsite(it) },
+                    onDelete = { onClickDeleteStore(it.indexUrl) },
                 )
             }
         }
@@ -101,6 +117,68 @@ private fun ExtensionRepoListItem(
                 onClick = {
                     val url = "${repo.baseUrl}/index.min.json"
                     context.copyToClipboard(url, url)
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ContentCopy,
+                    contentDescription = stringResource(MR.strings.action_copy_to_clipboard),
+                )
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(MR.strings.action_delete),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExtensionStoreListItem(
+    store: MangaExtensionStore,
+    onOpenWebsite: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+
+    ElevatedCard(
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = MaterialTheme.padding.medium,
+                    top = MaterialTheme.padding.medium,
+                    end = MaterialTheme.padding.medium,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(imageVector = Icons.AutoMirrored.Outlined.Label, contentDescription = null)
+            Text(
+                text = store.name,
+                modifier = Modifier.padding(start = MaterialTheme.padding.medium),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            IconButton(onClick = onOpenWebsite) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                    contentDescription = stringResource(MR.strings.action_open_in_browser),
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    context.copyToClipboard(store.indexUrl, store.indexUrl)
                 },
             ) {
                 Icon(

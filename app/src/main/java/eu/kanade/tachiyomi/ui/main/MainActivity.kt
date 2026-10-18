@@ -558,6 +558,12 @@ class MainActivity : BaseActivity() {
                         navigator.popUntilRoot()
                         navigator.push(MangaExtensionReposScreen(repoUrl))
                     }
+                } // Deep link to add a manga extension store (v2 format, e.g. Keiyoushi)
+                else if (intent.scheme == "mihon" && intent.data?.host == "extension-store") {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(MangaExtensionReposScreen(storeUrl))
+                    }
                 }
                 null
             }

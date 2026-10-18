@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import eu.kanade.presentation.category.components.CategoryFloatingActionButton
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.screen.browse.RepoScreenState
+import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStore
 import mihon.domain.extensionrepo.model.ExtensionRepo
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -30,6 +31,8 @@ fun MangaExtensionReposScreen(
     onClickCreate: () -> Unit,
     onOpenWebsite: (ExtensionRepo) -> Unit,
     onClickDelete: (String) -> Unit,
+    onOpenStoreWebsite: (MangaExtensionStore) -> Unit,
+    onClickDeleteStore: (String) -> Unit,
     onClickRefresh: () -> Unit,
     navigateUp: () -> Unit,
 ) {
@@ -67,12 +70,15 @@ fun MangaExtensionReposScreen(
 
         MangaExtensionReposContent(
             repos = state.repos,
+            stores = state.stores,
             lazyListState = lazyListState,
             paddingValues = paddingValues +
                 topSmallPaddingValues +
                 PaddingValues(horizontal = MaterialTheme.padding.medium),
             onOpenWebsite = onOpenWebsite,
             onClickDelete = onClickDelete,
+            onOpenStoreWebsite = onOpenStoreWebsite,
+            onClickDeleteStore = onClickDeleteStore,
         )
     }
 }

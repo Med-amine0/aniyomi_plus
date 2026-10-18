@@ -53,6 +53,15 @@
 -keepclasseswithmembers class okhttp3.MultipartBody$Builder { *; }
 ##---------------End: proguard configuration for okhttp  ----------
 
+##---------------Begin: proguard configuration for zstd (okhttp-zstd)  ----------
+# zstd-kmp (pulled in by okhttp-zstd) looks its compressor/decompressor up from the
+# native library through JNI FindClass, so the shrinker cannot see those references
+# and removes the classes. Any response carrying "Content-Encoding: zstd" then aborts
+# the process from native code (ClassNotFoundException: com.squareup.zstd.ZstdCompressor
+# in JniZstdKt.<clinit>), which kills the app with no crash screen.
+-keep class com.squareup.zstd.** { *; }
+##---------------End: proguard configuration for zstd (okhttp-zstd)  ----------
+
 ##---------------Begin: proguard configuration for kotlinx.serialization  ----------
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.** # core serialization annotations

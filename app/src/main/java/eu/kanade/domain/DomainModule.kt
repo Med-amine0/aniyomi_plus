@@ -18,6 +18,9 @@ import eu.kanade.domain.extension.manga.interactor.GetExtensionSources
 import eu.kanade.domain.extension.manga.interactor.GetMangaExtensionLanguages
 import eu.kanade.domain.extension.manga.interactor.GetMangaExtensionsByType
 import eu.kanade.domain.extension.manga.interactor.TrustMangaExtension
+import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStoreRepository
+import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStoreRepositoryImpl
+import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStoreService
 import eu.kanade.domain.items.chapter.interactor.GetAvailableScanlators
 import eu.kanade.domain.items.chapter.interactor.SetReadStatus
 import eu.kanade.domain.items.chapter.interactor.SyncChaptersWithSource
@@ -382,7 +385,7 @@ class DomainModule : InjektModule {
         addFactory { ToggleMangaSource(get()) }
         addFactory { ToggleMangaSourcePin(get()) }
         addFactory { TrustAnimeExtension(get(), get()) }
-        addFactory { TrustMangaExtension(get(), get()) }
+        addFactory { TrustMangaExtension(get(), get(), get()) }
 
         addFactory { ExtensionRepoService(get(), get()) }
 
@@ -405,6 +408,9 @@ class DomainModule : InjektModule {
         addFactory { UpdateMangaExtensionRepo(get(), get()) }
         addFactory { ToggleMangaIncognito(get()) }
         addFactory { GetMangaIncognitoState(get(), get(), get()) }
+
+        addSingletonFactory { MangaExtensionStoreService(get(), get(), get()) }
+        addSingletonFactory<MangaExtensionStoreRepository> { MangaExtensionStoreRepositoryImpl(get(), get()) }
 
         addSingletonFactory<CustomButtonRepository> { CustomButtonRepositoryImpl(get()) }
         addFactory { CreateCustomButton(get()) }

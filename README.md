@@ -8,7 +8,7 @@
 
 # Aniyomi Plus Fork
 
-### A fork of [Aniyomi](https://github.com/aniyomiorg/aniyomi) with Dashboard, Nested Categories, AniList API integration, and Torrent Streaming
+### A fork of [Aniyomi](https://github.com/aniyomiorg/aniyomi) with Dashboard, Nested Categories, AniList API integration, Torrent Streaming, and current manga extensions ([Keiyoushi](https://github.com/keiyoushi/extensions) / extensions-lib 1.6)
 
 [![Discord server](https://img.shields.io/discord/841701076242530374.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/F32UjdJZrR)
 [![License: Apache-2.0](https://img.shields.io/github/license/aniyomiorg/aniyomi?labelColor=27303D&color=818cf8)](/LICENSE)
@@ -58,6 +58,43 @@ Built-in torrent streaming support powered by TorrServer:
 - Known limitation: *Proxy mode* / *Proxy URL* on that screen are stored but not
   wired up by the current torrent engine
 
+### Manga Extensions — Keiyoushi & extensions-lib 1.6
+The manga side is in sync with the extensions people actually publish:
+
+- **extensions-lib 1.6** — sources that supply details and chapters from the
+  combined hook (`getMangaUpdate(manga, chapters, fetchDetails, fetchChapters)`,
+  which Keiyoushi's `KeiSource` wraps) are supported, `SMangaUpdate` included.
+  Sources built for lib 1.4 / 1.5 keep behaving exactly as they did — nothing
+  about their code path changed.
+- **Extension stores** — *Manga extension repos* takes protobuf `index.pb`,
+  `repo.json` and the legacy `index.min.json` repos, all merged into one
+  extension list, and stores can be removed from that same screen. No new
+  screens or buttons: the URL is sorted out when you add it.
+- **Anime side** — anime stores already worked the same way (*Anime extension
+  repos*), and anime extensions at lib v14 / v16 / v17 load.
+
+Adding the Keiyoushi store — **Settings → Browse → Manga extension repos → +**:
+
+```
+https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
+https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb
+https://raw.githubusercontent.com/keiyoushi/extensions/repo/repo.json
+```
+
+Any of the three works — the app follows `index.min.json` → `repo.json` →
+`index.pb` on its own. The Keiyoushi site's "add to app" button works too, via
+the `mihon://extension-store?url=…` deeplink.
+
+### Fixed
+- **Crashes with no crash screen** — R8 was stripping `com.squareup.zstd.**`
+  while the bundled native `libzstd-kmp.so` still resolved those classes by
+  name, so any `Content-Encoding: zstd` response killed the app from native
+  code. The package is kept now.
+- **Manga entries that refused to load** on extensions-lib 1.6 sources
+  (`AbstractMethodError` on `chapterListParse`). Details and chapters are also
+  fetched one after the other now instead of in parallel, because 1.6 sources
+  reject concurrent updates for the same manga.
+
 ### Upstream Sync
 Based on **[Aniyomi v0.18.2.1](https://github.com/aniyomiorg/aniyomi)**. The most
 recent sync brought in:
@@ -77,8 +114,9 @@ Grab the latest signed APK from the
 (**Assets** → `.apk`).
 
 Release builds are signed with the fork's key, so every release installs as an
-in-place update of the previous one. Every push to `main` is also built by
-GitHub Actions, and that APK is available under the run's **Artifacts** tab.
+in-place update of the previous one. Pushing a `v*` tag builds the APKs and
+publishes them as a release; every branch push is built too, with its APK under
+that run's **Artifacts** tab.
 
 ---
 
@@ -90,6 +128,8 @@ This fork builds upon **Aniyomi** with:
 - Dashboard with AniList API discovery
 - Configurable library columns
 - Developer tools for API debugging
+- Manga extension stores (protobuf `index.pb` / `repo.json` / legacy `index.min.json`)
+- Current manga extension API (extensions-lib 1.6, e.g. Keiyoushi)
 
 ---
 
@@ -255,8 +295,16 @@ Added `parentId` column to categories table for hierarchy support:
 - **[Mihon](https://github.com/mihonapp/mihon)** - Forked from (Tachiyomi fork)
 - **[Tachiyomi](https://github.com/tachiyomiorg/tachiyomi)** - Original manga reader
 
+### Manga Extension Support
+- **[Keiyoushi](https://github.com/keiyoushi/extensions)** - The manga extension catalogue this fork's extension stores are wired up for
+- **[keiyoushi/extensions-source](https://github.com/keiyoushi/extensions-source)** - `KeiSource` and the sources the extensions-lib 1.6 support is built around
+- **[Mihon](https://github.com/mihonapp/mihon)** - `source-api` and the extension-store design (`getMangaUpdate`, `SMangaUpdate`, `index.pb` stores)
+- **Every extension author** - none of this is worth anything without them
+
 ### Torrent Implementation
-- **[Animetail](https://github.com/nerdXD/Animetail)** - TorrServer implementation reference
+- **[Animetail](https://github.com/Animetailapp/Animetail)** - TorrServer implementation reference
+- **[torrentserver-aniyomi](https://github.com/Diegopyl1209/torrentserver-aniyomi)** - The torrent engine this fork uses
+- **[TorrServer](https://github.com/YouROK/TorrServer)** - The streaming server it is based on
 - [Torrent Streaming](https://github.com/Med-amine0/aniyomi_plus#torrent-streaming-torrserver) - Stream anime directly from magnet links and .torrent files
 
 ### APIs
