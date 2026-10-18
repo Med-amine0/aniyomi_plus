@@ -68,32 +68,61 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Aniyomi Plus ${{ github.ref_name }}
+          files: app/build/outputs/apk/release/*.apk
           body: |
             ## Aniyomi Plus Fork
 
-            ### Features
-            - Dashboard with AniList API integration
-            - Genre pills and tags dropdown
-            - Anime & Movies discovery
-            - Nested categories support
-            - Configurable library columns
-            - **Torrent Streaming (TorrServer)** - Stream anime directly from magnet links and .torrent files
+            Built on **Aniyomi 0.18.2.1**.
 
-            ### Torrent Streaming
-            Built-in torrent streaming support powered by TorrServer:
-            - Stream anime directly from magnet links and .torrent files
-            - Embedded TorrServer (no external server needed)
-            - Configurable port and custom trackers in Player Settings
-            - Auto-starts when playing torrent content
+            ### Manga extensions are current now (Keiyoushi)
+            - **extensions-lib 1.6** - sources that supply details and chapters
+              through the combined `getMangaUpdate(manga, chapters, fetchDetails,
+              fetchChapters)` hook (Keiyoushi's `KeiSource`) work, `SMangaUpdate`
+              included. Sources built for lib 1.4 / 1.5 behave exactly as before.
+            - **Extension stores** - *Manga extension repos* accepts protobuf
+              `index.pb`, `repo.json` and legacy `index.min.json`, merged into a
+              single extension list; deleting works for both kinds.
+            - Add Keiyoushi: **Settings > Browse > Manga extension repos > +**
+              then `https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json`
+              (or `.../index.pb`, or the "add to app" button on the Keiyoushi site).
+            - Anime stores already worked the same way - *Anime extension repos*,
+              same URL shapes, anime extensions lib v14 / v16 / v17.
+
+            ### Fixed
+            - Random crash with no crash screen while loading an entry: R8 stripped
+              `com.squareup.zstd.**` while the bundled native `libzstd-kmp.so`
+              resolved those classes by name, so any `Content-Encoding: zstd`
+              response aborted the app from native code.
+            - Manga entries failing to load on 1.6 sources (`AbstractMethodError`);
+              details and chapters are fetched sequentially now, because 1.6
+              sources reject concurrent updates for the same manga.
+
+            ### Fork features
+            - Dashboard tab with AniList API discovery - genre pills, tags
+              dropdown, anime & movie rows, in-app search
+            - Nested (hierarchical) categories
+            - Configurable library columns
+            - Dash debug panel in **More > Dash**
+            - Torrent streaming (TorrServer, off by default - enable it in
+              **More > Settings > Player > Torrents**)
+
+            ### Install
+            Grab the `.apk` from **Assets** below and install it over your current
+            build. Release builds are signed with the fork's key, so this is an
+            in-place update - library, categories and settings are kept.
 
             ### API
-            Uses [AniList GraphQL API](https://github.com/AniList/docs) for anime discovery.
+            Uses the [AniList GraphQL API](https://github.com/AniList/docs) for anime discovery.
 
             ### Credits
-            - [Animetail](https://github.com/nerdXD/Animetail) - TorrServer implementation reference
+            - [Aniyomi](https://github.com/aniyomiorg/aniyomi) - the base app
+            - [Mihon](https://github.com/mihonapp/mihon) / [Tachiyomi](https://github.com/tachiyomiorg/tachiyomi) - `source-api` and the extension-store design
+            - [Keiyoushi](https://github.com/keiyoushi/extensions) - manga extension catalogue and `KeiSource`
+            - [torrentserver-aniyomi](https://github.com/Diegopyl1209/torrentserver-aniyomi) / [TorrServer](https://github.com/YouROK/TorrServer) - torrent streaming
+            - [Animetail](https://github.com/Animetailapp/Animetail) - TorrServer integration reference
+            - [AniList](https://github.com/AniList/docs) - discovery API
 
-            ### Download
-            Download the debug APK from the Artifacts section.
+            Full details: https://github.com/Med-amine0/aniyomi_plus#whats-new-in-this-fork
           draft: false
           prerelease: false
         env:
