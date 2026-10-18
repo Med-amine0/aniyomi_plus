@@ -19,7 +19,7 @@ android {
     defaultConfig {
         applicationId = "com.aniyomi.nested"
 
-        versionCode = 132
+        versionCode = 133
         versionName = "0.18.2.1"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getCommitCount()}\"")

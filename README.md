@@ -8,7 +8,7 @@
 
 # Aniyomi Plus Fork
 
-### A fork of [Aniyomi](https://github.com/aniyomiorg/aniyomi) with Dashboard, Nested Categories, and AniList API integration
+### A fork of [Aniyomi](https://github.com/aniyomiorg/aniyomi) with Dashboard, Nested Categories, AniList API integration, and Torrent Streaming
 
 [![Discord server](https://img.shields.io/discord/841701076242530374.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/F32UjdJZrR)
 [![License: Apache-2.0](https://img.shields.io/github/license/aniyomiorg/aniyomi?labelColor=27303D&color=818cf8)](/LICENSE)
@@ -52,8 +52,33 @@ Built-in torrent streaming support powered by TorrServer:
 
 - Stream anime directly from magnet links and .torrent files
 - Embedded TorrServer (no external server needed)
-- Configurable port and custom trackers in Player Settings
-- Auto-starts when playing torrent content
+- **Turn it on first** — Player Settings → Torrents → *Enable torrent streaming*
+  (off by default; the toggle lives with the port and tracker settings)
+- Auto-starts once enabled whenever you play torrent content
+- Known limitation: *Proxy mode* / *Proxy URL* on that screen are stored but not
+  wired up by the current torrent engine
+
+### Upstream Sync
+Based on **[Aniyomi v0.18.2.1](https://github.com/aniyomiorg/aniyomi)**. The most
+recent sync brought in:
+
+- **Extension stores** — the extension repository list is now a protobuf/gzip
+  store index (aniyomix 1.6), migrated automatically from the legacy index
+- **extensions-lib v17** — related entries, hoster/video memo, an in-app HTTP
+  server for extensions, seek thumbnails, and new `source-api` models
+- **Upstream torrent streaming**, merged in alongside this fork's implementation
+
+---
+
+## Download
+
+Grab the latest signed APK from the
+[Releases page](https://github.com/Med-amine0/aniyomi_plus/releases/latest)
+(**Assets** → `.apk`).
+
+Release builds are signed with the fork's key, so every release installs as an
+in-place update of the previous one. Every push to `main` is also built by
+GitHub Actions, and that APK is available under the run's **Artifacts** tab.
 
 ---
 
