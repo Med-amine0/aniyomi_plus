@@ -385,7 +385,7 @@ class DomainModule : InjektModule {
         addFactory { ToggleMangaSource(get()) }
         addFactory { ToggleMangaSourcePin(get()) }
         addFactory { TrustAnimeExtension(get(), get()) }
-        addFactory { TrustMangaExtension(get(), get()) }
+        addFactory { TrustMangaExtension(get(), get(), get()) }
 
         addFactory { ExtensionRepoService(get(), get()) }
 

@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.extension.ExtensionUpdateNotifier
 import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
 import eu.kanade.tachiyomi.extension.manga.model.MangaExtension
 import eu.kanade.tachiyomi.extension.manga.model.MangaLoadResult
+import eu.kanade.tachiyomi.extension.manga.store.MangaExtensionStoreRepository
 import eu.kanade.tachiyomi.extension.manga.util.MangaExtensionLoader
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
@@ -34,6 +35,7 @@ internal class MangaExtensionApi {
     private val updateExtensionRepo: UpdateMangaExtensionRepo by injectLazy()
     private val extensionManager: MangaExtensionManager by injectLazy()
     private val json: Json by injectLazy()
+    private val mangaExtensionStoreRepository: MangaExtensionStoreRepository by injectLazy()
 
     private val lastExtCheck: Preference<Long> by lazy {
         preferenceStore.getLong("last_ext_check", 0)
@@ -41,10 +43,16 @@ internal class MangaExtensionApi {
 
     suspend fun findExtensions(): List<MangaExtension.Available> {
         return withIOContext {
-            getExtensionRepo.getAll()
+            val legacyExtensions = getExtensionRepo.getAll()
                 .map { async { getExtensions(it) } }
                 .awaitAll()
                 .flatten()
+
+            // Extension stores (e.g. Keiyoushi's v2 protobuf index) are merged in alongside the
+            // legacy repos so both keep working. Legacy repos win on package name collisions.
+            val storeExtensions = mangaExtensionStoreRepository.fetchExtensions()
+
+            (legacyExtensions + storeExtensions).distinctBy { it.pkgName }
         }
     }
 
@@ -79,6 +87,7 @@ internal class MangaExtensionApi {
 
         // Update extension repo details
         updateExtensionRepo.awaitAll()
+        mangaExtensionStoreRepository.refreshAll()
 
         val extensions = if (fromAvailableExtensionList) {
             extensionManager.availableExtensionsFlow.value
@@ -133,7 +142,7 @@ internal class MangaExtensionApi {
     }
 
     fun getApkUrl(extension: MangaExtension.Available): String {
-        return "${extension.repoUrl}/apk/${extension.apkName}"
+        return extension.apkUrl ?: "${extension.repoUrl}/apk/${extension.apkName}"
     }
 
     private fun ExtensionJsonObject.extractLibVersion(): Double {
