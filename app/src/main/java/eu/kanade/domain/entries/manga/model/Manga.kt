@@ -5,6 +5,8 @@ import eu.kanade.tachiyomi.data.cache.MangaCoverCache
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
+import kotlinx.serialization.json.JsonObject
+import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.metadata.comicinfo.ComicInfo
 import tachiyomi.core.metadata.comicinfo.ComicInfoPublishingStatus
@@ -45,6 +47,7 @@ fun Manga.toSManga(): SManga = SManga.create().also {
     it.status = status.toInt()
     it.thumbnail_url = thumbnailUrl
     it.initialized = initialized
+    it.memo = memo ?: JsonObject.EMPTY
 }
 
 fun Manga.copyFrom(other: SManga): Manga {
@@ -66,6 +69,7 @@ fun Manga.copyFrom(other: SManga): Manga {
         status = other.status.toLong(),
         updateStrategy = other.update_strategy,
         initialized = other.initialized && initialized,
+        memo = other.memo,
     )
 }
 
@@ -82,6 +86,7 @@ fun SManga.toDomainManga(sourceId: Long): Manga {
         updateStrategy = update_strategy,
         initialized = initialized,
         source = sourceId,
+        memo = memo,
     )
 }
 

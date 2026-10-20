@@ -320,6 +320,10 @@ class MangaScreen(
             source.getMangaUrl(manga.toSManga())
         } catch (e: Exception) {
             null
+        } catch (e: LinkageError) {
+            // Extensions built for a newer extensions-lib can reference members this app does not
+            // have yet (NoSuchMethodError/NoClassDefFoundError), which would otherwise crash here.
+            null
         }
     }
 
@@ -405,9 +409,8 @@ class MangaScreen(
      * Copy Manga URL to Clipboard
      */
     private fun copyMangaUrl(context: Context, manga_: Manga?, source_: MangaSource?) {
-        val manga = manga_ ?: return
-        val source = source_ as? HttpSource ?: return
-        val url = source.getMangaUrl(manga.toSManga())
-        context.copyToClipboard(url, url)
+        getMangaUrl(manga_, source_)?.let { url ->
+            context.copyToClipboard(url, url)
+        }
     }
 }

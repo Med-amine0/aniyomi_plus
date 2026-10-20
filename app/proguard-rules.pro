@@ -62,6 +62,19 @@
 -keep class com.squareup.zstd.** { *; }
 ##---------------End: proguard configuration for zstd (okhttp-zstd)  ----------
 
+##---------------Begin: proguard configuration for extensions  ----------
+# Extensions link against these types by name at runtime, so every member (including the
+# extensions-lib 1.6 memo accessors) has to survive shrinking even when the app itself never
+# calls it.
+-keep interface eu.kanade.tachiyomi.source.model.SManga { *; }
+-keep interface eu.kanade.tachiyomi.source.model.SChapter { *; }
+-keep class eu.kanade.tachiyomi.source.model.SMangaImpl { *; }
+-keep class eu.kanade.tachiyomi.source.model.SChapterImpl { *; }
+-keep class eu.kanade.tachiyomi.source.model.SMangaUpdate { *; }
+-keep class eu.kanade.tachiyomi.source.model.Page { *; }
+-keep interface eu.kanade.tachiyomi.source.MangaSource { *; }
+##---------------End: proguard configuration for extensions  ----------
+
 ##---------------Begin: proguard configuration for kotlinx.serialization  ----------
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.** # core serialization annotations
