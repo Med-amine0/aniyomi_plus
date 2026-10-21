@@ -9,6 +9,9 @@ on:
       - '*'
     tags:
       - v*
+  # Lets a build be started from the Actions tab or the API when a push event
+  # does not reach the workflow (e.g. GitHub event delivery delays).
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
