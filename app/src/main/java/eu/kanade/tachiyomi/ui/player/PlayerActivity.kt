@@ -297,6 +297,12 @@ class PlayerActivity : BaseActivity() {
     override fun onDestroy() {
         player.isExiting = true
 
+        // Playback is over: stop TorrServer so it stops seeding and the next torrent starts from a
+        // clean client (a server left seeding makes the next torrent's metadata fetch time out).
+        if (isFinishing) {
+            TorrentServerService.stopIfIdle()
+        }
+
         httpServer?.stop()
         httpServer = null
 

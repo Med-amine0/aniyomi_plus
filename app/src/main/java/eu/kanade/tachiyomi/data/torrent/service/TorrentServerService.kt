@@ -11,12 +11,15 @@ import android.os.IBinder
 import aniyomi.core.common.torrent.TorrentServerApi
 import aniyomi.core.common.torrent.TorrentServerUtils
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notificationBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
@@ -29,6 +32,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class TorrentServerService : Service() {
     private val serviceScope = CoroutineScope(EmptyCoroutineContext)
+    private val startStopMutex = Mutex()
     private val applicationContext = Injekt.get<Application>()
     private val torrentServerUtils = Injekt.get<TorrentServerUtils>()
     private val api = Injekt.get<TorrentServerApi>()
@@ -57,8 +61,15 @@ class TorrentServerService : Service() {
     @Suppress("MagicNumber")
     private fun startServer() {
         serviceScope.launch {
-            if (api.echo() == "") {
+            startStopMutex.withLock {
+                if (api.echo() != "") {
+                    isRunning = true
+                    return@withLock
+                }
+                // TorrServer calls os.Exit(1) when the port is taken, so this must never run twice
+                // for the same process while it is already up.
                 torrServer.TorrServer.startTorrentServer(filesDir.absolutePath)
+                isRunning = true
                 wait(10)
                 torrentServerUtils.setTrackersList()
             }
@@ -67,10 +78,14 @@ class TorrentServerService : Service() {
 
     private fun stopServer() {
         serviceScope.launch {
-            torrServer.TorrServer.stopTorrentServer()
-            api.shutdown()
-            applicationContext.cancelNotification(Notifications.ID_TORRENT_SERVER)
-            stopSelf()
+            startStopMutex.withLock {
+                isRunning = false
+                // stopTorrentServer() closes the http server and disconnects the torrent client, so
+                // seeding stops and port 8090 is released for the next start.
+                torrServer.TorrServer.stopTorrentServer()
+                applicationContext.cancelNotification(Notifications.ID_TORRENT_SERVER)
+                stopSelf()
+            }
         }
     }
 
@@ -125,6 +140,22 @@ class TorrentServerService : Service() {
         const val ACTION_STOP = "stop_torrent_server"
         val applicationContext = Injekt.get<Application>()
         val api = Injekt.get<TorrentServerApi>()
+
+        @Volatile
+        private var isRunning = false
+
+        /**
+         * Stops the server once playback is over, so it does not keep seeding in the background.
+         *
+         * Skipped while an anime download is still streaming through it, since stopping the server
+         * would abort the download.
+         */
+        fun stopIfIdle() {
+            if (!isRunning) return
+            val downloading = runCatching { Injekt.get<AnimeDownloadManager>().isRunning }.getOrDefault(false)
+            if (downloading) return
+            stop()
+        }
 
         suspend fun start() {
             try {

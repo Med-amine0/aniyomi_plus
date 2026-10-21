@@ -14,35 +14,21 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import tachiyomi.core.common.util.system.logcat
 import java.io.InputStream
-import java.net.Inet4Address
-import java.net.NetworkInterface
 
 class TorrentServerApi(
     private val network: NetworkHelper,
     private val json: Json,
     private val preferences: TorrentPreferences,
 ) {
+    /**
+     * TorrServer binds `":<port>"`, i.e. every interface, so loopback is always reachable.
+     *
+     * The device's LAN address used to be resolved here, but an interface that is up without being
+     * routable (VPN, stale Wi-Fi) made [echo] fail, which made the service start the server a second
+     * time - and TorrServer kills the process with `os.Exit(1)` when its port is already in use.
+     */
     val hostUrl: String
-        get() = "http://${getLocalIpAddress()}:${preferences.torrServerPort().get()}"
-
-    private fun getLocalIpAddress(): String {
-        try {
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val intf = interfaces.nextElement()
-                val addresses = intf.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val addr = addresses.nextElement()
-                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
-                        return addr.hostAddress ?: "127.0.0.1"
-                    }
-                }
-            }
-        } catch (ex: Exception) {
-            logcat(LogPriority.DEBUG, ex) { "Error getting local IP address" }
-        }
-        return "127.0.0.1"
-    }
+        get() = "http://127.0.0.1:${preferences.torrServerPort().get()}"
 
     suspend fun shutdown(): String {
         return try {
