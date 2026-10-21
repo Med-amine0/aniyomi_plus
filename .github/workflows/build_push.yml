@@ -94,6 +94,12 @@ jobs:
               same URL shapes, anime extensions lib v14 / v16 / v17.
 
             ### Fixed
+            - **Entry memo support** - the `memo` field of manga and chapters supplied
+              by extensions-lib 1.6 sources is now stored in the database (schema
+              migration 35). Existing backups and restores are unchanged.
+            - **Faster cold start** - the Dach and More tabs now dismiss the splash
+              screen as soon as they are ready instead of holding it for the full
+              5 seconds (measured 5.6s -> ~1.1s on a Galaxy S23+).
             - Random crash with no crash screen while loading an entry: R8 stripped
               `com.squareup.zstd.**` while the bundled native `libzstd-kmp.so`
               resolved those classes by name, so any `Content-Encoding: zstd`

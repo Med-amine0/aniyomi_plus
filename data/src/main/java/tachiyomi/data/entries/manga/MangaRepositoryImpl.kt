@@ -1,9 +1,12 @@
 package tachiyomi.data.entries.manga
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.JsonObject
 import logcat.LogPriority
+import mihon.core.common.extensions.EMPTY
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.MangaUpdateStrategyColumnAdapter
+import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.handlers.manga.MangaDatabaseHandler
 import tachiyomi.domain.entries.manga.model.Manga
@@ -120,6 +123,7 @@ class MangaRepositoryImpl(
                 dateAdded = manga.dateAdded,
                 updateStrategy = manga.updateStrategy,
                 version = manga.version,
+                memo = manga.memo ?: JsonObject.EMPTY,
             )
             mangasQueries.selectLastInsertedRowId()
         }
@@ -170,6 +174,7 @@ class MangaRepositoryImpl(
                     mangaId = value.id,
                     updateStrategy = value.updateStrategy?.let(MangaUpdateStrategyColumnAdapter::encode),
                     version = value.version,
+                    memo = value.memo?.let(MemoColumnAdapter::encode),
                     isSyncing = 0,
                 )
             }

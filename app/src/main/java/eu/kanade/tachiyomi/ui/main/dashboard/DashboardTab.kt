@@ -73,6 +73,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.main.MainActivity
 import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.entries.manga.model.MangaCover
 import tachiyomi.domain.library.anime.LibraryAnime
@@ -104,6 +105,12 @@ data object DashboardTab : Tab {
         val state by screenModel.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
+
+        LaunchedEffect(state.isLoading) {
+            if (!state.isLoading) {
+                (context as? MainActivity)?.ready = true
+            }
+        }
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,

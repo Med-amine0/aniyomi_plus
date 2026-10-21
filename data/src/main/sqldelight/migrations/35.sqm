@@ -1,0 +1,5 @@
+-- Source-provided memo (extensions-lib 1.6).
+-- NOTE: intentionally additive. Existing rows get the empty JSON object, so sources that do not
+-- use memo behave exactly as before.
+ALTER TABLE mangas ADD COLUMN memo BLOB NOT NULL DEFAULT x'7b7d';
+ALTER TABLE chapters ADD COLUMN memo BLOB NOT NULL DEFAULT x'7b7d';

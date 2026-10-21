@@ -2,6 +2,10 @@
 
 package eu.kanade.tachiyomi.data.database.models.manga
 
+import kotlinx.serialization.json.JsonObject
+import mihon.core.common.extensions.EMPTY
+import kotlin.jvm.Transient
+
 class ChapterImpl : Chapter {
 
     override var id: Long? = null
@@ -31,6 +35,16 @@ class ChapterImpl : Chapter {
     override var last_modified: Long = 0
 
     override var version: Long = 0
+
+    // Transient so that Java serialization keeps working: JsonObject is not Serializable.
+    @Transient
+    private var memoValue: JsonObject? = null
+
+    override var memo: JsonObject
+        get() = memoValue ?: JsonObject.EMPTY
+        set(value) {
+            memoValue = value
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

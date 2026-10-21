@@ -3,9 +3,11 @@ package tachiyomi.domain.entries.manga.model
 import androidx.compose.runtime.Immutable
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
+import kotlinx.serialization.json.JsonObject
 import tachiyomi.core.common.preference.TriState
 import java.io.Serializable
 import java.time.Instant
+import kotlin.jvm.Transient
 
 @Immutable
 data class Manga(
@@ -32,6 +34,10 @@ data class Manga(
     val lastModifiedAt: Long,
     val favoriteModifiedAt: Long?,
     val version: Long,
+    // Source-provided metadata (extensions-lib 1.6). Not part of Java serialization; the value
+    // always comes from the database, where it is stored per manga.
+    @Transient
+    val memo: JsonObject? = null,
 ) : Serializable {
 
     val expectedNextUpdate: Instant?
