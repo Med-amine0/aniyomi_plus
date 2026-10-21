@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.library.anime
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastDistinctBy
@@ -108,17 +109,37 @@ class AnimeLibraryScreenModel(
         screenModelScope,
     )
 
-    private val categoryStack = mutableListOf<Long>()
+    private val categoryStackPreference = libraryPreferences.animeCategoryStack()
+
+    /**
+     * Ids of the nested categories drilled into, outermost first.
+     *
+     * Snapshot backed so the content and the back handler recompose when it changes, and persisted
+     * so the current level survives opening an entry, switching tabs or the process being killed.
+     */
+    private val categoryStack = mutableStateListOf<Long>().apply {
+        addAll(parseCategoryStack(categoryStackPreference.get()))
+    }
+
     private var lastBackPressTime = 0L
 
     fun pushCategory(categoryId: Long) {
+        if (categoryStack.lastOrNull() == categoryId) return
         categoryStack.add(categoryId)
+        persistCategoryStack()
     }
 
     fun popCategory(): Long? {
-        return if (categoryStack.isNotEmpty()) {
-            categoryStack.removeLast()
-        } else null
+        val popped = if (categoryStack.isNotEmpty()) categoryStack.removeLast() else null
+        if (popped != null) persistCategoryStack()
+        return popped
+    }
+
+    fun clearCategoryStack() {
+        if (categoryStack.isNotEmpty()) {
+            categoryStack.clear()
+            persistCategoryStack()
+        }
     }
 
     fun getCurrentCategory(): Long? {
@@ -126,6 +147,10 @@ class AnimeLibraryScreenModel(
     }
 
     fun isAtRoot(): Boolean = categoryStack.isEmpty()
+
+    private fun persistCategoryStack() {
+        categoryStackPreference.set(categoryStack.joinToString(separator = ","))
+    }
 
     fun checkDoubleBackPress(): Boolean {
         val currentTime = System.currentTimeMillis()
@@ -888,3 +913,6 @@ class AnimeLibraryScreenModel(
         }
     }
 }
+
+private fun parseCategoryStack(raw: String): List<Long> =
+    raw.split(',').mapNotNull { it.trim().toLongOrNull() }

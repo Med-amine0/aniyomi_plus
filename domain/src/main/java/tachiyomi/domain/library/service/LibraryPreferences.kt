@@ -162,6 +162,9 @@ class LibraryPreferences(
     fun lastUsedAnimeCategory() = preferenceStore.getInt(Preference.appStateKey("last_used_anime_category"), 0)
     fun lastUsedMangaCategory() = preferenceStore.getInt(Preference.appStateKey("last_used_category"), 0)
 
+    fun animeCategoryStack() = preferenceStore.getString(Preference.appStateKey("last_used_anime_category_stack"))
+    fun mangaCategoryStack() = preferenceStore.getString(Preference.appStateKey("last_used_category_stack"))
+
     fun animeUpdateCategories() =
         preferenceStore.getStringSet(LIBRARY_UPDATE_ANIME_CATEGORIES_PREF_KEY, emptySet())
 

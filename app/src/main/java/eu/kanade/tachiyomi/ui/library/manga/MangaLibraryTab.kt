@@ -208,21 +208,22 @@ data object MangaLibraryTab : Tab {
                     )
                 }
                 else -> {
+                    val currentCategory = screenModel.getCurrentCategory()
+                        ?.let { categoryId -> state.categories.firstOrNull { it.id == categoryId } }
                     MangaLibraryContent(
                         categories = state.categories,
                         searchQuery = state.searchQuery,
                         selection = state.selection,
                         contentPadding = contentPadding,
+                        currentCategory = currentCategory,
                         currentPage = { screenModel.activeCategoryIndex },
                         hasActiveFilters = state.hasActiveFilters,
                         showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
                         onChangeCurrentPage = { newPage ->
-                            val currentCategory = state.categories.getOrNull(screenModel.activeCategoryIndex)
-                            if (currentCategory != null) {
-                                screenModel.pushCategory(currentCategory.id)
-                            }
                             screenModel.activeCategoryIndex = newPage
                         },
+                        onCategoryClick = { screenModel.pushCategory(it.id) },
+                        onNavigateBack = { screenModel.popCategory() },
                         onMangaClicked = { navigator.push(MangaScreen(it)) },
                         onContinueReadingClicked = { it: LibraryManga ->
                             scope.launchIO {
@@ -317,26 +318,16 @@ data object MangaLibraryTab : Tab {
                 state.selectionMode -> screenModel.clearSelection()
                 state.searchQuery != null -> screenModel.search(null)
                 !screenModel.isAtRoot() -> {
-                    val previousCategory = screenModel.popCategory()
-                    if (previousCategory != null) {
-                        val categoryIndex = state.categories.indexOfFirst { it.id == previousCategory }
-                        if (categoryIndex >= 0) {
-                            screenModel.activeCategoryIndex = categoryIndex
-                        }
+                    screenModel.popCategory()
+                    val categoryIndex = screenModel.getCurrentCategory()
+                        ?.let { categoryId -> state.categories.indexOfFirst { it.id == categoryId } }
+                        ?: -1
+                    if (categoryIndex >= 0) {
+                        screenModel.activeCategoryIndex = categoryIndex
                     }
                 }
                 else -> {
                     // At root level - do nothing, let HomeScreen handle going to dashboard
-                }
-            }
-        }
-
-        LaunchedEffect(screenModel.isAtRoot()) {
-            if (screenModel.isAtRoot() && !state.selectionMode && state.searchQuery == null) {
-                if (screenModel.checkDoubleBackPress()) {
-                    (context as? MainActivity)?.finish()
-                } else {
-                    snackbarHostState.showSnackbar("Click back again to exit")
                 }
             }
         }

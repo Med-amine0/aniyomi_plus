@@ -36,10 +36,13 @@ fun AnimeLibraryContent(
     searchQuery: String?,
     selection: List<LibraryAnime>,
     contentPadding: PaddingValues,
+    currentCategory: Category?,
     currentPage: () -> Int,
     hasActiveFilters: Boolean,
     showPageTabs: Boolean,
     onChangeCurrentPage: (Int) -> Unit,
+    onCategoryClick: (Category) -> Unit,
+    onNavigateBack: () -> Unit,
     onAnimeClicked: (Long) -> Unit,
     onContinueWatchingClicked: ((LibraryAnime) -> Unit)?,
     onToggleSelection: (LibraryAnime) -> Unit,
@@ -59,18 +62,15 @@ fun AnimeLibraryContent(
             end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
         ),
     ) {
-        var navigationStack by remember { mutableStateOf(listOf<Category?>(null)) }
-        val currentCategory = navigationStack.last()
-
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(currentCategory) { mutableStateOf(false) }
 
-        if (navigationStack.size > 1) {
+        if (currentCategory != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { navigationStack = navigationStack.dropLast(1) }) {
+                IconButton(onClick = onNavigateBack) {
                     Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
                 }
-                Text(text = currentCategory?.name ?: "")
+                Text(text = currentCategory.name)
             }
         }
 
@@ -142,7 +142,7 @@ fun AnimeLibraryContent(
                 contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
                 selection = selection,
                 onGroupClick = { clickedCategory ->
-                    navigationStack = navigationStack + clickedCategory
+                    onCategoryClick(clickedCategory)
                 },
                 onClickAnime = onClickAnimeInternal,
                 onLongClickAnime = onToggleRangeSelection,
