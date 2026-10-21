@@ -94,6 +94,10 @@ the `mihon://extension-store?url=…` deeplink.
   (`AbstractMethodError` on `chapterListParse`). Details and chapters are also
   fetched one after the other now instead of in parallel, because 1.6 sources
   reject concurrent updates for the same manga.
+- **Library navigation** — the nested category you drilled into is kept when you
+  open an entry and come back, and the system back button now steps up one
+  category level instead of jumping straight to the dashboard. Back at the
+  library root still returns to the dashboard.
 
 ### Upstream Sync
 Based on **[Aniyomi v0.18.2.1](https://github.com/aniyomiorg/aniyomi)**. The most

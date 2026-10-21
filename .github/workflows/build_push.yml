@@ -100,6 +100,10 @@ jobs:
             - **Faster cold start** - the Dach and More tabs now dismiss the splash
               screen as soon as they are ready instead of holding it for the full
               5 seconds (measured 5.6s -> ~1.1s on a Galaxy S23+).
+            - **Library navigation** - the nested category you drilled into is kept
+              when you open an entry and come back, and the system back button now
+              steps up one category level instead of jumping straight to the
+              dashboard. Back at the library root still returns to the dashboard.
             - Random crash with no crash screen while loading an entry: R8 stripped
               `com.squareup.zstd.**` while the bundled native `libzstd-kmp.so`
               resolved those classes by name, so any `Content-Encoding: zstd`
