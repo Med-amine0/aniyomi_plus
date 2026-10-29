@@ -25,6 +25,7 @@ import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.entries.anime.model.asAnimeCover
 import tachiyomi.domain.library.anime.LibraryAnime
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.presentation.core.components.material.PullRefresh
@@ -53,6 +54,7 @@ fun AnimeLibraryContent(
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
     getEntryColumnsForOrientation: ((Boolean) -> PreferenceMutableState<Int>)? = null,
+    isMergedCategory: Boolean = false,
     getAnimeLibraryForPage: (Int) -> List<AnimeLibraryItem>,
 ) {
     Column(
@@ -70,7 +72,9 @@ fun AnimeLibraryContent(
                 IconButton(onClick = onNavigateBack) {
                     Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
                 }
-                Text(text = currentCategory.name)
+                if (!isMergedCategory) {
+                    Text(text = currentCategory.name)
+                }
             }
         }
 
@@ -98,7 +102,7 @@ fun AnimeLibraryContent(
             }
         }
 
-        val gridItems = remember(childCategories, entries) {
+        val gridItems = remember(childCategories, entries, isMergedCategory) {
             val groups = childCategories.map { cat ->
                 val pageIndex = categories.indexOf(cat)
                 val itemsForCat = if (pageIndex != -1) getAnimeLibraryForPage(pageIndex) else emptyList()
@@ -115,7 +119,18 @@ fun AnimeLibraryContent(
                 CategoryGridItem.Group(cat, cover)
             }
             val entryItems = entries.map { CategoryGridItem.Entry(it) }
-            groups + entryItems
+            val mergedHeader = if (isMergedCategory) {
+                entries.firstOrNull()?.libraryAnime?.anime?.let { anime ->
+                    CategoryGridItem.MergedHeader(
+                        title = anime.title,
+                        description = anime.description,
+                        coverAnime = anime.asAnimeCover(),
+                    )
+                }
+            } else {
+                null
+            }
+            listOfNotNull(mergedHeader) + groups + entryItems
         }
 
         val columns = getColumnsForOrientation(true)

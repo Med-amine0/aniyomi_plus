@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.library.components.EntryCompactGridItem
+import eu.kanade.presentation.library.components.MergedCategoryHeader
 import eu.kanade.tachiyomi.ui.library.manga.MangaLibraryItem
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.manga.model.MangaCover
@@ -29,6 +31,11 @@ import tachiyomi.domain.library.manga.LibraryManga
 sealed interface MangaCategoryGridItem {
     data class Group(val category: Category, val coverManga: MangaCover?) : MangaCategoryGridItem
     data class Entry(val libraryItem: MangaLibraryItem) : MangaCategoryGridItem
+    data class MergedHeader(
+        val title: String,
+        val description: String?,
+        val coverManga: MangaCover?,
+    ) : MangaCategoryGridItem
 }
 
 @Composable
@@ -52,8 +59,18 @@ fun MangaCategoryGridScreen(
         items(
             items = items,
             key = { it.hashCode() },
+            span = { item ->
+                if (item is MangaCategoryGridItem.MergedHeader) GridItemSpan(maxLineSpan) else GridItemSpan(1)
+            },
         ) { item ->
             when (item) {
+                is MangaCategoryGridItem.MergedHeader -> {
+                    MergedCategoryHeader(
+                        title = item.title,
+                        description = item.description,
+                        cover = item.coverManga,
+                    )
+                }
                 is MangaCategoryGridItem.Group -> {
                     Column(
                         modifier = Modifier.clickable { onGroupClick(item.category) },

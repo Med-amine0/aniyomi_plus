@@ -121,6 +121,17 @@ class AnimeLibraryScreenModel(
         addAll(parseCategoryStack(categoryStackPreference.get()))
     }
 
+    private val mergedCategoriesPreference = libraryPreferences.animeMergedCategories()
+
+    /**
+     * Ids of the categories created with "Merge", which are drawn with the entry look.
+     *
+     * Cosmetic only, so it is kept next to the category stack instead of in the database.
+     */
+    private val mergedCategoryIds = mutableStateListOf<Long>().apply {
+        addAll(parseCategoryStack(mergedCategoriesPreference.get()))
+    }
+
     private var lastBackPressTime = 0L
 
     fun pushCategory(categoryId: Long) {
@@ -150,6 +161,26 @@ class AnimeLibraryScreenModel(
 
     private fun persistCategoryStack() {
         categoryStackPreference.set(categoryStack.joinToString(separator = ","))
+    }
+
+    fun isMergedCategory(categoryId: Long?): Boolean = categoryId != null && mergedCategoryIds.contains(categoryId)
+
+    private fun markMergedCategory(categoryId: Long) {
+        if (mergedCategoryIds.contains(categoryId)) return
+        mergedCategoryIds.add(categoryId)
+        persistMergedCategories()
+    }
+
+    private fun persistMergedCategories() {
+        mergedCategoriesPreference.set(mergedCategoryIds.joinToString(separator = ","))
+    }
+
+    private fun pruneMergedCategories(existingCategoryIds: Collection<Long>) {
+        val removed = mergedCategoryIds.filterNot { it in existingCategoryIds }
+        if (removed.isNotEmpty()) {
+            mergedCategoryIds.removeAll(removed.toSet())
+            persistMergedCategories()
+        }
     }
 
     fun checkDoubleBackPress(): Boolean {
@@ -183,6 +214,7 @@ class AnimeLibraryScreenModel(
                     }
             }
                 .collectLatest {
+                    pruneMergedCategories(it.keys.map { category -> category.id })
                     mutableState.update { state ->
                         state.copy(
                             isLoading = false,
@@ -792,7 +824,12 @@ class AnimeLibraryScreenModel(
         mutableState.update { it.copy(dialog = Dialog.DeleteAnime(nimeList)) }
     }
 
-    fun createCategoryFromSelection() {
+    fun openCreateCategoryDialog() {
+        if (state.value.selection.isEmpty()) return
+        mutableState.update { it.copy(dialog = Dialog.CreateCategoryFromSelection) }
+    }
+
+    fun createCategoryFromSelection(merged: Boolean = false) {
         screenModelScope.launchIO {
             val selectedAnime = state.value.selection
             if (selectedAnime.isEmpty()) return@launchIO
@@ -820,6 +857,10 @@ class AnimeLibraryScreenModel(
                     setAnimeCategories.await(libraryAnime.anime.id, listOf(newCategoryId))
                 }
 
+                if (merged) {
+                    markMergedCategory(newCategoryId)
+                }
+
                 clearSelection()
             }
         }
@@ -831,6 +872,7 @@ class AnimeLibraryScreenModel(
 
     sealed interface Dialog {
         data object SettingsSheet : Dialog
+        data object CreateCategoryFromSelection : Dialog
         data class ChangeCategory(
             val anime: List<Anime>,
             val initialSelection: ImmutableList<CheckboxState<Category>>,

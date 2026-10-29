@@ -100,6 +100,11 @@
     <string name="action_move_category">Set categories</string>
     <string name="delete_category_confirmation">Do you wish to delete the category \"%s\"?</string>
     <string name="delete_category">Delete category</string>
+    <string name="create_from_selection_title">Create from selection</string>
+    <string name="create_from_selection_category">Category</string>
+    <string name="create_from_selection_category_summary">Normal category, standard look</string>
+    <string name="create_from_selection_merge">Merge</string>
+    <string name="create_from_selection_merge_summary">Looks like one entry: cover and description of the first selected entry</string>
     <string name="action_edit_cover">Edit cover</string>
     <string name="action_view_chapters">View chapters</string>
     <string name="action_pause">Pause</string>

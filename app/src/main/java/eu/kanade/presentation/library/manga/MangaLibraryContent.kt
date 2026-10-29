@@ -25,6 +25,7 @@ import eu.kanade.tachiyomi.ui.library.manga.MangaLibraryItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.entries.manga.model.asMangaCover
 import tachiyomi.domain.library.manga.LibraryManga
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.presentation.core.components.material.PullRefresh
@@ -53,6 +54,7 @@ fun MangaLibraryContent(
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
     getEntryColumnsForOrientation: ((Boolean) -> PreferenceMutableState<Int>)? = null,
+    isMergedCategory: Boolean = false,
     getLibraryForPage: (Int) -> List<MangaLibraryItem>,
 ) {
     Column(
@@ -70,7 +72,9 @@ fun MangaLibraryContent(
                 IconButton(onClick = onNavigateBack) {
                     Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
-                Text(text = currentCategory.name)
+                if (!isMergedCategory) {
+                    Text(text = currentCategory.name)
+                }
             }
         }
 
@@ -98,7 +102,7 @@ fun MangaLibraryContent(
             }
         }
 
-        val gridItems = remember(childCategories, entries) {
+        val gridItems = remember(childCategories, entries, isMergedCategory) {
             val groups = childCategories.map { cat ->
                 val pageIndex = categories.indexOf(cat)
                 val itemsForCat = if (pageIndex != -1) getLibraryForPage(pageIndex) else emptyList()
@@ -116,7 +120,18 @@ fun MangaLibraryContent(
                 MangaCategoryGridItem.Group(cat, cover)
             }
             val entryItems = entries.map { MangaCategoryGridItem.Entry(it) }
-            groups + entryItems
+            val mergedHeader = if (isMergedCategory) {
+                entries.firstOrNull()?.libraryManga?.manga?.let { manga ->
+                    MangaCategoryGridItem.MergedHeader(
+                        title = manga.title,
+                        description = manga.description,
+                        coverManga = manga.asMangaCover(),
+                    )
+                }
+            } else {
+                null
+            }
+            listOfNotNull(mergedHeader) + groups + entryItems
         }
 
         val columns = getColumnsForOrientation(true)

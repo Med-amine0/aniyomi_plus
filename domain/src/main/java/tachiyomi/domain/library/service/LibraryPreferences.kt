@@ -165,6 +165,14 @@ class LibraryPreferences(
     fun animeCategoryStack() = preferenceStore.getString(Preference.appStateKey("last_used_anime_category_stack"))
     fun mangaCategoryStack() = preferenceStore.getString(Preference.appStateKey("last_used_category_stack"))
 
+    /**
+     * Ids of the categories created with "Merge", drawn with the entry look instead of the
+     * category look. Purely cosmetic, so it lives next to the category stack instead of in the
+     * database - categories themselves are untouched.
+     */
+    fun animeMergedCategories() = preferenceStore.getString(Preference.appStateKey("merged_anime_categories"))
+    fun mangaMergedCategories() = preferenceStore.getString(Preference.appStateKey("merged_manga_categories"))
+
     fun animeUpdateCategories() =
         preferenceStore.getStringSet(LIBRARY_UPDATE_ANIME_CATEGORIES_PREF_KEY, emptySet())
 

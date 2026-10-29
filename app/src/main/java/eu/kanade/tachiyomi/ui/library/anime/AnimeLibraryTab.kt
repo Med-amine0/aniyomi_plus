@@ -33,6 +33,7 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.entries.components.LibraryBottomActionMenu
+import eu.kanade.presentation.library.CreateFromSelectionDialog
 import eu.kanade.presentation.library.DeleteLibraryEntryDialog
 import eu.kanade.presentation.library.anime.AnimeLibraryContent
 import eu.kanade.presentation.library.anime.AnimeLibrarySettingsDialog
@@ -177,7 +178,7 @@ data object AnimeLibraryTab : Tab {
                     onDownloadClicked = screenModel::runDownloadActionSelection
                         .takeIf { state.selection.fastAll { !it.anime.isLocal() } },
                     onDeleteClicked = screenModel::openDeleteAnimeDialog,
-                    onCreateCategoryClicked = screenModel::createCategoryFromSelection,
+                    onCreateCategoryClicked = screenModel::openCreateCategoryDialog,
                     isManga = false,
                 )
             },
@@ -245,6 +246,7 @@ data object AnimeLibraryTab : Tab {
                         getEntryColumnsForOrientation = {
                             screenModel.getEntryColumnsPreferenceForCurrentOrientation(it)
                         },
+                        isMergedCategory = screenModel.isMergedCategory(currentCategory?.id),
                     ) { state.getAnimelibItemsByPage(it) }
                 }
             }
@@ -262,6 +264,13 @@ data object AnimeLibraryTab : Tab {
                     onDismissRequest = onDismissRequest,
                     screenModel = settingsScreenModel,
                     category = category,
+                )
+            }
+            is AnimeLibraryScreenModel.Dialog.CreateCategoryFromSelection -> {
+                CreateFromSelectionDialog(
+                    onDismissRequest = onDismissRequest,
+                    onCreateCategory = { screenModel.createCategoryFromSelection(merged = false) },
+                    onCreateMerged = { screenModel.createCategoryFromSelection(merged = true) },
                 )
             }
             is AnimeLibraryScreenModel.Dialog.ChangeCategory -> {
