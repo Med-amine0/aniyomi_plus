@@ -125,6 +125,7 @@ fun MangaLibraryContent(
                     MangaCategoryGridItem.MergedHeader(
                         title = manga.title,
                         description = manga.description,
+                        tags = manga.genre.orEmpty(),
                         coverManga = manga.asMangaCover(),
                     )
                 }

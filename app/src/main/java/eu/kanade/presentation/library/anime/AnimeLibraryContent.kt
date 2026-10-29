@@ -124,6 +124,7 @@ fun AnimeLibraryContent(
                     CategoryGridItem.MergedHeader(
                         title = anime.title,
                         description = anime.description,
+                        tags = anime.genre.orEmpty(),
                         coverAnime = anime.asAnimeCover(),
                     )
                 }

@@ -34,6 +34,7 @@ sealed interface CategoryGridItem {
     data class MergedHeader(
         val title: String,
         val description: String?,
+        val tags: List<String>,
         val coverAnime: AnimeCover?,
     ) : CategoryGridItem
 }
@@ -68,6 +69,7 @@ fun AnimeCategoryGridScreen(
                     MergedCategoryHeader(
                         title = item.title,
                         description = item.description,
+                        tags = item.tags,
                         cover = item.coverAnime,
                     )
                 }
